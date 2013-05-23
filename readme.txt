@@ -39,7 +39,7 @@ If you own a multi user WordPress blog or website you can use the WP Security Au
 We need help translating the plugin and the WordPress Security Events. If you're good at translating, please drop us an email on plugins@wpprohelp.com.
 
 = WordPress Security Tips & Tricks =
-Even if WordPress security is not your cup of tea, the security of your WordPress is your responsibility. Keep yourself up to date with the latest WordPress Security Tips & Tricks. WPProHelp.com frequently publishes WordPress security tips & tricks on the [WordPress Security section] (http://www.wpprohelp.com/wordpress-security/) of their blog.
+Even if WordPress security is not your cup of tea, the security of your WordPress is your responsibility. Keep yourself up to date with the latest WordPress Security Tips & Tricks. WPProHelp.com frequently publishes WordPress security tips & tricks on the [WordPress Security section](http://www.wpprohelp.com/wordpress-security/) of their blog.
 
 
 = Further Reading =
