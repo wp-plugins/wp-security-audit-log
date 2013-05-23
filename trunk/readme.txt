@@ -1,16 +1,16 @@
 === WP Security Audit Log ===
-Contributors: wpprohelp
+Contributors: WPProHelp
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
 Tags: wordpress security plugin, wordpress security audit log, audit log, event log wordpress, wordpress user tracking, wordpress activity log, wordpress audit, security event log
 Requires at least: 3.0
-Tested up to: 3.5
+Tested up to: 3.6
 Stable tag: 0.1
 
 Identify WordPress security issues before they become a problem. Keep an audit log of everything that happens on WordPress
 
 == Description ==
-Identify WordPress security issues before they become a problem by keeping an audit log of what is happening under the hood of your WordPress blog or website. This plugin is written by WordPress Security Consultants [WPProHelp] (http://www.wpprohelp.com/wordpress-security-services/).
+Identify WordPress security issues before they become a problem by keeping an audit log of what is happening under the hood of your WordPress blog or website. This plugin is written by WordPress Security Consultants [WPProHelp](http://www.wpprohelp.com/wordpress-security-services/).
 
 = Keep A WordPress Security Audit Log & Identify WordPress Security Issues =
 WP Security Audit Log keeps track of everything that is happening on your WordPress blog or website. By using this WordPress security plugin it is very easy to track suspicious user activity before it becomes a problem. A security event is generated in each of the below cases:
@@ -45,8 +45,8 @@ Even if WordPress security is not your cup of tea, the security of your WordPres
 = Further Reading =
 For more information and to get started with WordPress Security, check out the following:
 
-* [Official WP Security Audit Log Page] (http://www.wpprohelp.com/wordpress-security-audit-log-plugin/)
-* [List of all WP Security Audit Log Events] (http://www.wpprohelp.com/wordpress-security-plugins/wp-security-audit-log/security-audit-event-logs/)
+* [Official WP Security Audit Log Page](http://www.wpprohelp.com/wordpress-security-audit-log-plugin/)
+* [List of all WP Security Audit Log Events](http://www.wpprohelp.com/wordpress-security-plugins/wp-security-audit-log/security-audit-event-logs/)
 * [Recipe for ultimate WordPress Security](http://www.wpprohelp.com/wordpress-security/recipe-ultimate-diy-wordpress-security/).
 
 == Installation ==
