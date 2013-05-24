@@ -45,9 +45,9 @@ Even if WordPress security is not your cup of tea, the security of your WordPres
 = Further Reading =
 For more information and to get started with WordPress Security, check out the following:
 
-* [Official WP Security Audit Log Page](http://www.wpprohelp.com/wordpress-security-audit-log-plugin/)
+* [Official WP Security Audit Log Page](http://www.wpprohelp.com/wordpress-security-plugins/wp-audit-log-plugin/)
 * [List of all WP Security Audit Log Events](http://www.wpprohelp.com/wordpress-security-plugins/wp-security-audit-log/security-audit-event-logs/)
-* [Recipe for ultimate WordPress Security](http://www.wpprohelp.com/wordpress-security/recipe-ultimate-diy-wordpress-security/).
+* [Recipe for ultimate WordPress Security](http://www.wpprohelp.com/wordpress-security/recipe-ultimate-diy-wordpress-security/)
 
 == Installation ==
 
