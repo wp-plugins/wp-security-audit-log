@@ -1,7 +1,18 @@
-<?php /**
- * @kyos
- * Dashboard page
- */ if(! WPPH::canRun()){ return; }?>
+<?php if(! WPPH::canRun()){ return; } ?>
+<?php
+if(! WPPH::ready())
+{
+    $errors = WPPH::getPLuginErrors();
+    foreach($errors as $k =>$v) { call_user_func(array('WPPHAdminNotices',$k),$v); }
+
+    echo '<div id="wpph-pageWrapper" class="wrap">';
+    echo '<p>We have encountered some errors during the installation of the plugin which you can find above.</p>';
+    echo '<p>Please try to correct them and then reactivate the plugin.</p>';
+    echo '</div>';
+    return;
+}
+?>
+
 <div id="wpph-pageWrapper" class="wrap">
     <h2 class="pageTitle pageTitle-eventViewer"><?php echo __('Audit Log Viewer');?></h2>
     <div id="EventViewerWrapper">
@@ -19,15 +30,19 @@
                     <select name="actionLimit1" class="actionLimit" data-bind="options: availablePageSize, value: selectedPageSize"></select>
                     <input type="button" value="Apply" class="button action" data-bind="disable: loading, click: applyPageSize">
                 </div>
-                <div class="paginationWrapper" data-bind="visible: totalEventsCount">
-                    <span class="showPages"><span class="span1" data-bind="text: totalEventsCount() > 0 ? 1 + offset() : 0"></span>-
-                        <span class="span2" data-bind="text: offset() + events().length"></span> <?php echo __('of');?>
-                        <span class="span3" data-bind="text: totalEventsCount"></span></span>
-                    <div class="buttonsWrapper">
-                        <button class="pageButton buttonNext" title="Next" href="#" data-bind="disable: loading, click: nextPage, css: {wpphButtonDisabled: offset() + events().length >= totalEventsCount() - 1}"><span>&gt;</span></button>
-                        <button class="pageButton buttonPrevious" title="Previous" href="#" data-bind="disable: loading, click: prevPage, css: {wpphButtonDisabled: offset() <= 0}"><span>&lt;</span></button>
-                    </div>
+
+                <div class="tablenav-pages">
+                    <span class="displaying-num" data-bind="text: totalEventsCount()+' events'"></span>
+                    <span class="pagination-links"><a href="#" title="Go to the first page" class="first-page" data-bind="click: firstPage, css: {disabled: offset() <= 0}">«</a>
+                    <a href="#" title="Go to the previous page" class="prev-page" data-bind="click: prevPage, disable: loading, click: prevPage, css: {disabled: offset() <= 0}">‹</a>
+                    <span class="paging-input">
+                        <input type="text" size="1" id="fdr" title="Current page" class="current-page"
+                               data-bind="value: currentPage, event: {keydown: onCurrentPageInputKeyDown} "/> of <span class="total-pages" data-bind="text: pageCount"></span>
+                    </span>
+                    <a href="#" title="Go to the next page" class="next-page" data-bind="click: nextPage, disable: loading, click: nextPage, css: {disabled: offset() + events().length >= totalEventsCount() - 1}">›</a>
+                    <a href="#" title="Go to the last page" class="last-page" data-bind="click: lastPage, css: {disabled: offset() + events().length >= totalEventsCount() - 1}">»</a></span>
                 </div>
+
             </div>
         </div>
         <table class="wp-list-table widefat fixed" cellspacing="0" cellpadding="0">
@@ -82,14 +97,16 @@
                     <select name="actionLimit1" class="actionLimit" data-bind="options: availablePageSize, value: selectedPageSize"></select>
                     <input type="button" value="Apply" class="button action" data-bind="disable: loading, click: applyPageSize">
                 </div>
-                <div class="paginationWrapper" data-bind="visible: totalEventsCount">
-                    <span class="showPages"><span class="span1" data-bind="text: totalEventsCount() > 0 ? 1 + offset() : 0"></span>-
-                        <span class="span2" data-bind="text: offset() + events().length"></span> <?php echo __('of');?>
-                        <span class="span3" data-bind="text: totalEventsCount"></span></span>
-                    <div class="buttonsWrapper">
-                        <button class="pageButton buttonNext" title="<?php echo __('Next');?>" href="#" data-bind="disable: loading, click: nextPage, css: {wpphButtonDisabled: offset() >= totalEventsCount() - 1}"><span>&gt;</span></button>
-                        <button class="pageButton buttonPrevious" title="<?php echo __('Previous');?>" href="#" data-bind="disable: loading, click: prevPage, css: {wpphButtonDisabled: offset() <= 0}"><span>&lt;</span></button>
-                    </div>
+                <div class="tablenav-pages">
+                    <span class="displaying-num" data-bind="text: totalEventsCount()+' events'"></span>
+                    <span class="pagination-links"><a href="#" title="Go to the first page" class="first-page" data-bind="click: firstPage, css: {disabled: offset() <= 0}">«</a>
+                    <a href="#" title="Go to the previous page" class="prev-page" data-bind="click: prevPage, disable: loading, click: prevPage, css: {disabled: offset() <= 0}">‹</a>
+                    <span class="paging-input">
+                        <input type="text" size="1" id="fdr" title="Current page" class="current-page"
+                               data-bind="value: currentPage, event: {keydown: onCurrentPageInputKeyDown} "/> of <span class="total-pages" data-bind="text: pageCount"></span>
+                    </span>
+                    <a href="#" title="Go to the next page" class="next-page" data-bind="click: nextPage, disable: loading, click: nextPage, css: {disabled: offset() + events().length >= totalEventsCount() - 1}">›</a>
+                    <a href="#" title="Go to the last page" class="last-page" data-bind="click: lastPage, css: {disabled: offset() + events().length >= totalEventsCount() - 1}">»</a></span>
                 </div>
             </div>
         </div>
