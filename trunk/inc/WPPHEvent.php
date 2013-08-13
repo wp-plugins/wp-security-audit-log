@@ -1,19 +1,9 @@
 <?php
 /**
- * Class that will handle the events management
- * @kyos
+ * WPPHEvent
  */
 class WPPHEvent
 {
-    public static function bindHooks(array $hooks = array())
-    {
-        if(empty($hooks)){ return; }
-        foreach($hooks as $hook){
-            if(is_callable(array(self,$hook),true)){
-                call_user_func(array(self,$hook));
-            }
-        }
-    }
     /**
      * Retrieve the list of events
      * @return array
@@ -24,7 +14,7 @@ class WPPHEvent
 // 1xxx - Login/Logout events
             array( 'id' => 1000, 'category' => 'NOTICE', 'text' => __('Successfully logged in.') ),
             array( 'id' => 1001, 'category' => 'NOTICE', 'text' => __('Successfully logged out.') ),
-            array( 'id' => 1002, 'category' => 'WARNING', 'text' => __('Failed Login detected using <strong>%s</strong> as username.') ),
+            array( 'id' => 1002, 'category' => 'WARNING', 'text' => __('Failed login detected using <strong>%s</strong> as username.') ),
 
 // 2xxx - User activity events
             //  Created a new blog post called %Post Title%. Blog post ID is %ID%
@@ -61,6 +51,24 @@ class WPPHEvent
             array( 'id' => 2014, 'category' => 'HIGH', 'text' => __('Post <strong>%s</strong> has been restored from trash.') ),
             // 2015 - untrashed page
             array( 'id' => 2015, 'category' => 'HIGH', 'text' => __('Page <strong>%s</strong> has been restored from trash.') ),
+            // 2016 - Post category changed
+            array( 'id' => 2016, 'category' => 'NOTICE', 'text' => __('Changed the category(ies) of the post <strong>%s</strong> from <strong>%s</strong> to <strong>%s</strong>.') ),
+            // 2017 - Changed the URL of the post %post_name% from %old_url% to %new_url%
+            array( 'id' => 2017, 'category' => 'NOTICE', 'text' => __('Changed the URL of the post <strong>%s</strong> from <strong>%s</strong> to <strong>%s</strong>.') ),
+            // 2018 - Changed the URL of the page %page_name% from %old_url% to %new_url%
+            array( 'id' => 2018, 'category' => 'NOTICE', 'text' => __('Changed the URL of the page <strong>%s</strong> from <strong>%s</strong> to <strong>%s</strong>.') ),
+            // 2019 - Changed the author of %post_name% post from %old_author% to %new_author%
+            array( 'id' => 2019, 'category' => 'NOTICE', 'text' => __('Changed the author of <strong>%s</strong> from <strong>%s</strong> to <strong>%s</strong>.') ),
+            // 2020 - Changed the author of %page_name% page from %old_author% to %new_author%
+            array( 'id' => 2020, 'category' => 'NOTICE', 'text' => __('Changed the author of <strong>%s</strong> page from <strong>%s</strong> to <strong>%s</strong>.') ),
+            // 2021 - %postName% from %oldStatus% to %newStatus%
+            array( 'id' => 2021, 'category' => 'NOTICE', 'text' => __('Changed the status of <strong>%s</strong> post from <strong>%s</strong> to <strong>%s</strong>.') ),
+            // 2022 - page from published to draft
+            array( 'id' => 2022, 'category' => 'NOTICE', 'text' => __('Changed the status of <strong>%s</strong> page from <strong>%s</strong> to <strong>%s</strong>.') ),
+            // 2023 - added new category
+            array( 'id' => 2023, 'category' => 'NOTICE', 'text' => __('Created a new category called <strong>%s</strong>.') ),
+            // 2024 - deleted category
+            array( 'id' => 2024, 'category' => 'WARNING', 'text' => __('Deleted the <strong>%s</strong> category.') ),
 
 // 3xxx - Themes management
             // Activated the theme %themeName%
@@ -80,10 +88,16 @@ class WPPHEvent
             array( 'id' => 4007, 'category' => 'HIGH', 'text' => __('User <strong>%s</strong> with the role of <strong>%s</strong> was deleted by <strong>%s</strong>.') ),
 
 // 5xxx - Plugin management
+            // # 5000 Installed the plugin %name%.
+            array( 'id' => 5000, 'category' => 'HIGH', 'text' => __('Installed the plugin <strong>%s</strong>.') ),
             // Activated the plugin %plugin_name% installed in %plugin_directory%
-            array( 'id' => 5000, 'category' => 'HIGH', 'text' => __('Activated the plugin <strong>%s</strong> installed in /<strong>%s</strong>.') ),
+            array( 'id' => 5001, 'category' => 'HIGH', 'text' => __('Activated the plugin <strong>%s</strong> installed in /<strong>%s</strong>.') ),
             // Deactivated the plugin %plugin_name% installed in %plugin_directory%
-            array( 'id' => 5001, 'category' => 'HIGH', 'text' => __('Deactivated the plugin <strong>%s</strong> installed in /<strong>%s</strong>.') ),
+            array( 'id' => 5002, 'category' => 'HIGH', 'text' => __('Deactivated the plugin <strong>%s</strong> installed in /<strong>%s</strong>.') ),
+            // # 5003 Uninstalled the plugin %plugin_name% which was installed in %path%
+            array( 'id' => 5003, 'category' => 'HIGH', 'text' => __('Uninstalled the plugin <strong>%s</strong> which was installed in /<strong>%s</strong>.') ),
+            // # 5004 Upgraded the plugin %name% installed in %path%
+            array( 'id' => 5004, 'category' => 'WARNING', 'text' => __('Upgraded the plugin <strong>%s</strong> installed in /<strong>%s</strong>.') ),
 
 // 6xxx - System events
             //
@@ -104,8 +118,8 @@ class WPPHEvent
 
 // 2xxx - User activity events
 
-    // 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-    public static function hookWatchBlogActivity() { add_action('transition_post_status', array('WPPHEventWatcher', 'WatchBlogActivity'), 10, 3); }
+    // 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2021, 2022
+    public static function hookWatchBlogActivity() { add_action('transition_post_status', array('WPPHEventWatcher', 'watchBlogActivity'), 10, 3); }
     // 2008, 2009
     public static function hookFileDeletion() { add_action('delete_post', array('WPPHEventWatcher', 'watchTrash'), 10, 1); }
     // 2010
@@ -130,6 +144,71 @@ class WPPHEvent
     public static function hookUntrashedPosts() { add_action('untrash_post', array('WPPHEventWatcher', 'watchTrashUndo')); }
     // 2015
     public static function hookUntrashedPages() { add_action('untrash_page', array('WPPHEventWatcher', 'watchTrashUndo')); }
+    // 2016, 2017
+    public static function hookWatchPostStateBefore()
+    {
+        if(isset($_POST['action']) && $_POST['action'] == 'autosave') { return; }
+
+        if(isset($GLOBALS['WPPH_DEFAULT_EDITOR_ENABLED']) || isset($GLOBALS['WPPH_SCREEN_EDITOR_ENABLED']))
+        {
+            wpphLog(__METHOD__.'() triggered by hook.');
+
+            $pid = $_POST['post_ID'];
+
+            /*
+             * CHECK IF POST/PAGE AUTHOR UPDATED; 2019
+             * ## step 1: this is where we check if author has been changed
+             * ## step 2: @see wpph_managePostAuthorUpdateQuickEditForm()
+             */
+            if(! empty($_POST['post_author']))
+            {
+                $GLOBALS['WPPH_POST_AUTHOR_UPDATED'] = intval($_POST['post_author']);
+                if(isset($GLOBALS['WPPH_SCREEN_EDITOR_ENABLED'])){
+                    // trigger hook manually
+                    add_filter( 'wp_insert_post_data', 'wpph_managePostAuthorUpdateQuickEditForm', '1', 2 );
+                }
+            }
+
+            // if blog post
+            if($_POST['post_type'] == 'post')
+            {
+                // before further checks, we have to make sure this post isn't new
+                global $wpdb;
+                $postExists = (bool)$wpdb->get_var("SELECT ID FROM ".$wpdb->posts." WHERE ID = ".$pid);
+                if(! $postExists){
+                    return;
+                }
+
+                /*
+                 * CHECK IF POST CATEGORY UPDATED; 2016
+                 */
+                $GLOBALS['WPPH_POST_OLD_CATEGORIES'] = wp_get_post_categories($pid);
+
+                /*
+                 * CHECK IF POST URL UPDATED; 2017
+                 * ## step 1: this is where we retrieve the new URL
+                 * ## step 2: @see WPPHEventWatcher::watchBlogActivity()
+                 */
+                $GLOBALS['WPPH_POST_NEW_URL'] = get_permalink($pid);
+            }
+            // if page
+            elseif($_POST['post_type'] == 'page')
+            {
+                /*
+                 * CHECK IF PAGE URL UPDATED; 2018
+                 * ## step 1: this is where we retrieve the new URL
+                 * ## step 2: @see WPPHEventWatcher::watchBlogActivity()
+                 */
+                $GLOBALS['WPPH_POST_NEW_URL'] = get_permalink($pid);
+            }
+        }
+    }
+
+    // 2023
+    public static function hookWatchCategoryAdd() { WPPHEventWatcher::watchCategoryAdd($_POST); }
+    // 2024
+    public static function hookWatchCategoryDelete() { WPPHEventWatcher::watchCategoryDelete($_POST); }
+
 
 // 3xxx - Themes management
 
@@ -143,18 +222,18 @@ class WPPHEvent
     public static function hookUserRegisterEvent() { add_action('user_register', array('WPPHEventWatcher', 'watchEventUserRegister')); }
     // 4002
     public static function hookUserRoleUpdated() {
-        add_action('edit_user_profile_update', array('WPPHEventWatcher', 'watchUserRoleUpdated'));
-        add_action('personal_options_update', array('WPPHEventWatcher', 'watchUserRoleUpdated'));
+        add_action('edit_user_profile_update', array('WPPHEventWatcher', 'watchUserInfoUpdated'));
+        add_action('personal_options_update', array('WPPHEventWatcher', 'watchUserInfoUpdated'));
     }
     // 4003, 4004
     public static function hookUserPasswordUpdated() {
-        add_action('edit_user_profile_update', array('WPPHEventWatcher', 'watchUserPasswordUpdated'));
-        add_action('personal_options_update', array('WPPHEventWatcher', 'watchUserPasswordUpdated'));
+        add_action('edit_user_profile_update', array('WPPHEventWatcher', 'watchUserInfoUpdated'));
+        add_action('personal_options_update', array('WPPHEventWatcher', 'watchUserInfoUpdated'));
     }
     // 4005, 4006
     public static function hookUserEmailUpdated() {
-        add_action('edit_user_profile_update', array('WPPHEventWatcher', 'watchUserEmailUpdated'));
-        add_action('personal_options_update', array('WPPHEventWatcher', 'watchUserEmailUpdated'));
+        add_action('edit_user_profile_update', array('WPPHEventWatcher', 'watchUserInfoUpdated'));
+        add_action('personal_options_update', array('WPPHEventWatcher', 'watchUserInfoUpdated'));
     }
     // 4007
     public static function hookUserDeletion() { add_action( 'delete_user', array('WPPHEventWatcher', 'watchUserDeletion') ); }
@@ -162,17 +241,14 @@ class WPPHEvent
 
 // 5xxx - Plugin management
 
-    // 5000, 5001
+    // 5000, 5001, 5002, 5003, 5004
     public static function hookWatchPluginActivity() {
-        @require_once(ABSPATH.'wp-admin/includes/plugin.php');
-        $current = get_plugins();
-        foreach($current as $plugin_file => $plugin_data) {
-            if ($plugin_file == WPPH_PLUGIN_BASE_NAME) {
-                continue;
-            }
-            add_action('activate_' . $plugin_file, array('WPPHEventWatcher', 'watchPluginActivate'));
-            add_action('deactivate_' . $plugin_file, array('WPPHEventWatcher', 'watchPluginDeactivate'));
-        }
+        @include_once(ABSPATH.'wp-admin/includes/plugin.php');
+        WPPHEventWatcher::watchPluginInstall();  // 5000
+        WPPHEventWatcher::watchPluginActivate(); // 5001
+        WPPHEventWatcher::watchPluginDeactivate(); // 5002
+        WPPHEventWatcher::watchPluginUninstall();  // 5003
+        WPPHEventWatcher::watchPluginUpgrade(); // 5004
     }
 
 
@@ -189,22 +265,33 @@ class WPPHEvent
      * @param int $eventID
      * @param int $userID . A value of 0 means user "System". This is the ID of the user triggering the alert.
      * @param string $userIP
-     * @param string $eventData Optional. If provided should be as a serialized array.
+     * @param array $eventData Optional. If provided should be as an array.
+     * @param string $failedLoginUserName The name of the user used for the failed login
      * @return bool
      */
-    public static function _addLogEvent($eventID = 1000, $userID = 0, $userIP = '', $eventData = '')
+    public static function _addLogEvent($eventID = 1000, $userID = 0, $userIP = '', $eventData = array(), $failedLoginUserName='')
     {
         if(empty($userIP)){ $userIP = WPPHUtil::getIP(); }
+        $tableName = WPPHDB::getFullTableName('MAIN');
+        $eventData = base64_encode(serialize($eventData));
+        $query = sprintf("INSERT INTO $tableName (EventID, UserID, UserIP, EventData,UserName) VALUES(%d, %d, '%s', '%s', '%s')",$eventID, $userID, $userIP, $eventData, $failedLoginUserName);
 
         global $wpdb;
-        $query = sprintf("INSERT INTO %s (EventID, UserID, UserIP, EventData) VALUES(%d, %d, '%s', '%s')"
-            ,WPPHDatabase::getFullTableName('MAIN'), $eventID, $userID, $userIP, $eventData);
-        if(false === $wpdb->query($wpdb->prepare($query)))
-        {
-            // mysql error
-            return false;
+        if($eventID == 1002){ // 1002 == failed login
+
+            // check if there is already an event there
+            $eventNumber = $wpdb->get_var("SELECT EventNumber FROM $tableName WHERE EventID = $eventID AND UserIP = '$userIP' AND UserName ='$failedLoginUserName'");
+            if(! empty($eventNumber))
+            {
+                // update
+                $query = "UPDATE $tableName
+                            SET
+                                EventDate = CURRENT_TIMESTAMP(),
+                                EventCount = (EventCount + 1)
+                                WHERE EventNumber = ".$eventNumber;
+            }
         }
-        return true;
+        return ((false === $wpdb->query($query)) ? false : true);
     }
 
 
@@ -217,7 +304,7 @@ class WPPHEvent
     {
         global $wpdb;
         $table = WPPHDatabase::getFullTableName('events');
-        return $wpdb->get_row($wpdb->prepare("SELECT EventType, EventDescription FROM $table WHERE EventID = $eventID"));
+        return $wpdb->get_row("SELECT EventType, EventDescription FROM $table WHERE EventID = $eventID");
     }
 
     /**
@@ -254,18 +341,17 @@ class WPPHEvent
 
         $t1 = WPPHDatabase::getFullTableName('main');
         $t2 = WPPHDatabase::getFullTableName('events');
-        $querySelect = "SELECT le.EventNumber, le.EventID, le.EventDate, le.UserID, le.UserIP, le.EventData,
-                          led.EventType, led.EventDescription
-                        FROM `$t1` as le
-                          INNER JOIN `$t2` as led
-                            ON le.EventID = led.EventID
-                              ORDER BY $orderBy
-                              $sort
-                              LIMIT $limit;";
         global $wpdb;
-        return $wpdb->get_results($wpdb->prepare($querySelect), ARRAY_A);
+        $query = "SELECT le.EventNumber, le.EventID, le.EventDate, le.UserID, le.UserIP, le.EventData, le.EventCount, le.UserName,
+                                          led.EventType, led.EventDescription
+                                        FROM `$t1` as le
+                                          INNER JOIN `$t2` as led
+                                            ON le.EventID = led.EventID
+                                              ORDER BY $orderBy
+                                              $sort
+                                              LIMIT $limit;";
+        return $wpdb->get_results($query, ARRAY_A);
     }
-
 
 }
 
@@ -317,22 +403,23 @@ class WPPHEventWatcher extends WPPHEvent
         $nur = ucfirst($uInfo['userRole']);
 
         // %s created new user %s with role %s
-        $eventData = serialize(array($un, $nu, $nur));
+        $eventData = array($un, $nu, $nur);
 
         if($un == 'System')
         {
             // A new user with the username %username% has registered with the role of %user_role%
-            $eventData = serialize(array($nu, $nur));
+            $eventData = array($nu, $nur);
             self::_addLogEvent(4000, 0, WPPHUtil::getIP(), $eventData);
         }
         else {
             // %s created new user %s with role %s
-            $eventData = serialize(array($un, $nu, $nur));
+            $eventData = array($un, $nu, $nur);
             self::_addLogEvent(4001, $current_user->ID, WPPHUtil::getIP(), $eventData);
         }
     }
 
     /**
+     * #! 6000
      * @internal
      * Hooks to the events deletion event
      */
@@ -340,12 +427,35 @@ class WPPHEventWatcher extends WPPHEvent
     {
         wpphLog(__METHOD__.'() triggered by hook.');
 
+        if((defined('DISABLE_WP_CRON') && 'DISABLE_WP_CRON'))
+        {
+            wpphLog('wp-cron is disabled.');
+            self::__deleteEvents();
+        }
+        else{
+            add_action(WPPH_PLUGIN_DEL_EVENTS_CRON_TASK_NAME, array('WPPHEventWatcher','__deleteEvents'));
+            if ( ! wp_next_scheduled(WPPH_PLUGIN_DEL_EVENTS_CRON_TASK_NAME) ) {
+                wp_schedule_event( time(), 'daily', WPPH_PLUGIN_DEL_EVENTS_CRON_TASK_NAME );
+                wpphLog(__METHOD__.'() scheduled by wp-cron.');
+            }
+        }
+    }
+
+    //@internal
+    public static function __deleteEvents()
+    {
         // check settings and delete the events (if any)
         $settings = WPPH::getPluginSettings();
-        if($settings->cleanupRan == 1){
-            wpphLog(__METHOD__.'() Ignored. Cleanup already ran today.');
-            return;
+
+        //if wp-cron disabled
+        if((defined('DISABLE_WP_CRON') && 'DISABLE_WP_CRON'))
+        {
+            if($settings->cleanupRan == 1){
+                wpphLog(__METHOD__.'() Ignored. Cleanup already ran today.');
+                return;
+            }
         }
+
         // check to see how we should do the cleanup (by days or by number)
         $cleanupType = 1; // by number by default
 
@@ -359,6 +469,8 @@ class WPPHEventWatcher extends WPPHEvent
             if(self::_deleteEventsOlderThan($settings->daysToKeep)){
                 $settings->cleanupRan = 1;
                 $settings->lastCleanup = time();
+                self::_addLogEvent(6000, 0);
+                wpphLog(__METHOD__.'() Cleanup complete.');
             }
         }
         // by number
@@ -367,20 +479,18 @@ class WPPHEventWatcher extends WPPHEvent
             if(self::_deleteEventsGreaterThan($settings->eventsToKeep)){
                 $settings->cleanupRan = 1;
                 $settings->lastCleanup = time();
+                self::_addLogEvent(6000, 0);
+                wpphLog(__METHOD__.'() Cleanup complete.');
             }
         }
         WPPH::updatePluginSettings($settings);
-        if($settings->cleanupRan == 1){
-            //#! add event success
-            wpphLog(__METHOD__.'() Cleanup complete.');
-            self::_addLogEvent(6000, 0);
-        }
     }
+
     //@internal
     // delete by days
     private static function _deleteEventsOlderThan($days = 1)
     {
-        $query = "DELETE FROM ".WPPHDatabase::getFullTableName('main')." WHERE EventDate > (NOW() - INTERVAL ".$days." DAY)";
+        $query = "DELETE FROM ".WPPHDatabase::getFullTableName('main')." WHERE EventDate < (NOW() - INTERVAL ".$days." DAY)";
         global $wpdb;
         $result = $wpdb->query($query);
         if($result === false){ $status = 'Error executing query'; }
@@ -405,35 +515,29 @@ class WPPHEventWatcher extends WPPHEvent
         {
             $limit = $count - $keep;
             $query = "DELETE FROM $tableName ORDER BY EventDate LIMIT $limit";
+            $result = $wpdb->query($query);
+            if($result === false){ $status = 'Error executing query'; }
+            else { $status = 'Query executed'; }
+            wpphLog(__METHOD__.'('.$number.') called.', array('query'=>$query, 'status'=>$status, 'rowsAffected'=> (int)$result));
+            return ($result !== false);
         }
         else {
             wpphLog(__METHOD__.'('.$number.') called.  Ignored, there are not enough events to trigger this action.');
             return;
         }
-
-        $result = $wpdb->query($query);
-        if($result === false){ $status = 'Error executing query'; }
-        else { $status = 'Query executed'; }
-        wpphLog(__METHOD__.'('.$number.') called.', array('query'=>$query, 'status'=>$status, 'rowsAffected'=> (int)$result));
-        return ($result !== false);
     }
 
     /**
      * @internal
      * Fired on login failure
      */
-    public static function watchLoginFailure($username)
+    public static function watchLoginFailure($username='')
     {
         wpphLog(__METHOD__.'() triggered by hook.', array('username'=>$username));
-        self::_addLogEvent(1002,0,WPPHUtil::getIP(),serialize(array($username)));
+        self::_addLogEvent(1002,0,WPPHUtil::getIP(),array($username), base64_encode($username));
     }
 
-    /**
-     * @internal
-     * @param $userID the id of the user being updated
-     * Triggered when a user's role is updated
-     */
-    public static function watchUserRoleUpdated($userID)
+    public static function watchUserInfoUpdated($userID)
     {
         wpphLog(__METHOD__.'() triggered by hook.');
 
@@ -447,96 +551,112 @@ class WPPHEventWatcher extends WPPHEvent
         $editedUserName = $editedUserInfo['userName'];
         $initialUserRole = $editedUserInfo['userRole'];
 
-        if(empty($_POST['role'])){
-            wpphLog(__METHOD__.'() Ignored. Role did not change.');
-            return;
+        // check and see *what* has been updated...
+
+        // If a user's role has been updated
+        if(!empty($_POST['role'])){
+            $updatedRole = trim($_POST['role']);
+            if(self::_userRoleUpdated($cid, $initialUserRole, $updatedRole, $editedUserName, $cName)){
+                return;
+            }
         }
 
-        $updatedRole = trim($_POST['role']);
+        // If a user's password has been updated
+        if(!empty($_POST['pass1'])){
+            if(self::_userPasswordUpdated($userID, $cid, $cName, $editedUserName, $initialUserRole)){
+                return;
+            }
+        }
+
+        // if a user's email was updated
+        if(! empty($_POST['email'])){
+            global $wpdb;
+            // get current user's email
+            $oldEmail = $wpdb->get_var("SELECT user_email FROM ".$wpdb->users." WHERE ID = $userID");
+            // new email
+            $newEmailSafe = mysql_real_escape_string($_POST['email']);
+            self::_userEmailUpdated($userID, $cid, $cName, $oldEmail, $newEmailSafe);
+        }
+    }
+
+    /**
+     * @internal
+     * Triggered when a user's role is updated
+     * @param $currentUserID
+     * @param $initialUserRole
+     * @param $updatedRole
+     * @param $editedUserName
+     * @param $currentUserName
+     * @return bool
+     */
+    private static function _userRoleUpdated($currentUserID, $initialUserRole, $updatedRole, $editedUserName, $currentUserName)
+    {
+        wpphLog(__METHOD__.'() triggered by hook.');
+
+        //$updatedRole = trim($_POST['role']);
         if(strcasecmp($initialUserRole, $updatedRole)==0){
             wpphLog(__METHOD__.'() Ignored. Role did not change.');
-            return;
+            return false;
         }
 
         // The role of user <strong>%s</strong> was changed from <strong>%s</strong> to <strong>%s</strong> by <strong>%s</strong>
-        $eData = serialize(array($editedUserName, ucfirst($initialUserRole), ucfirst($updatedRole), $cName));
+        $eData = array($editedUserName, ucfirst($initialUserRole), ucfirst($updatedRole), $currentUserName);
 
-        self::_addLogEvent(4002, $cid, WPPHUtil::getIP(), $eData);
+        self::_addLogEvent(4002, $currentUserID, WPPHUtil::getIP(), $eData);
+        return true;
     }
 
     /**
      * @internal
-     * @param $userID the id of the user being updated
      * Triggered when a user's role is updated
+     * @param $userID
+     * @param $currentUserID
+     * @param $currentUserName
+     * @param $editedUserName
+     * @param $editedUserRole
+     * @return bool
      */
-    public static function watchUserPasswordUpdated($userID)
+    private static function _userPasswordUpdated($userID, $currentUserID, $currentUserName, $editedUserName, $editedUserRole)
     {
-        if(empty($_POST['pass1'])){
-            wpphLog(__METHOD__.'() triggered by hook. Ignored. Password did not change.');
-            return;
-        }
         wpphLog(__METHOD__.'() triggered by hook.');
 
-        // get info for the currently logged in user
-        $current_user = wp_get_current_user();
-        $cid = $current_user->ID;
-        $cName = $current_user->user_login;
-
         // check to see who's who here
-        if($userID == $cid)
+        if($userID == $currentUserID)
         {
-            self::_addLogEvent(4003, $cid);
-            return;
+            self::_addLogEvent(4003, $currentUserID);
+            return true;
         }
 
-        // get info for the currently updated user
-        $editedUserInfo = WPPHDB::getUserInfo($userID);
-        $editedUserName = $editedUserInfo['userName'];
-        $editedUserRole = $editedUserInfo['userRole'];
-
-        // <strong>%s</strong> changed the password for <strong>%s</strong> with the role of <strong>%s</strong>
-        $eData = serialize(array($cName, $editedUserName, ucfirst($editedUserRole)));
-
-        self::_addLogEvent(4004, $cid, WPPHUtil::getIP(), $eData);
+        $eData = array($currentUserName, $editedUserName, ucfirst($editedUserRole));
+        self::_addLogEvent(4004, $currentUserID, WPPHUtil::getIP(), $eData);
+        return true;
     }
 
     /**
      * @internal
-     * @param $userID the id of the user being updated
      * Triggered when a user's email is updated
+     * @param $userID The user ID triggering this hook
+     * @param $currentUserID The ID of the current logged in user
+     * @param $currentUserName
+     * @param $oldEmail
+     * @param $newEmail
+     * @return bool
      */
-    public static function watchUserEmailUpdated($userID)
+    private static function _userEmailUpdated($userID, $currentUserID, $currentUserName, $oldEmail, $newEmail)
     {
-        if(empty($_POST['email'])){
-            wpphLog(__METHOD__.'() triggered by hook. Ignored. Email did not change.');
-            return;
-        }
         wpphLog(__METHOD__.'() triggered by hook.');
-
-        global $wpdb;
-
-        // get info for the currently logged in user
-        $current_user = wp_get_current_user();
-        $cid = $current_user->ID;
-        $cName = $current_user->user_login;
-
-        // get current user's email
-        $oldEmail = $wpdb->get_var("SELECT user_email FROM ".$wpdb->users." WHERE ID = $userID");
-        // new email
-        $newEmail = mysql_real_escape_string($_POST['email']);
-
-        // check to see who's who here
-        if($userID == $cid)
-        {
-
-            self::_addLogEvent(4005, $cid, WPPHUtil::getIP(), serialize(array($oldEmail, $newEmail)));
-            return;
-        }
 
         // check if email updated
-        if($_POST['email'] == $oldEmail){
+        if($newEmail == $oldEmail){
             wpphLog(__METHOD__.'() Ignored. Email did not change.');
-            return;
+            return false;
+        }
+
+        // check to see who's who here
+        if($userID == $currentUserID)
+        {
+            self::_addLogEvent(4005, $currentUserID, WPPHUtil::getIP(), array($oldEmail, $newEmail));
+            return true;
         }
 
         // get info for the currently updated user
@@ -544,9 +664,10 @@ class WPPHEventWatcher extends WPPHEvent
         $editedUserName = $editedUserInfo['userName'];
 
         // %user_making_change% changed the email address of user account %user% from %old_email% to %new_email%
-        $eData = serialize(array($cName, $editedUserName, $oldEmail, $newEmail));
+        $eData = array($currentUserName, $editedUserName, $oldEmail, $newEmail);
 
-        self::_addLogEvent(4006, $cid, WPPHUtil::getIP(), $eData);
+        self::_addLogEvent(4006, $currentUserID, WPPHUtil::getIP(), $eData);
+        return true;
     }
 
     /**
@@ -572,57 +693,221 @@ class WPPHEventWatcher extends WPPHEvent
         $_userName = $_userInfo['userName'];
         $_userRole = ucfirst($_userInfo['userRole']);
 
-        self::_addLogEvent(4007, $currentUserID, WPPHUtil::getIP(), serialize(array($_userName, $_userRole, $un)));
-        // delete transient as well
-        delete_transient(sha1($userID));
+        self::_addLogEvent(4007, $currentUserID, WPPHUtil::getIP(), array($_userName, $_userRole, $un));
     }
 
+    // # 5001
     public static function watchPluginActivate()
     {
         wpphLog(__METHOD__.'() triggered by hook.');
 
-        // activate
-        $a = (empty($_GET['plugin']) ? '' : $_GET['plugin']);
-
-        // if active plugin edited (Using the plugin editor)
-        if(empty($a)){
-            $a = (empty($_GET['file']) ? '' : $_GET['file']);
-        }
-
-        $b = '';
-        if(!empty($a)){ $b = dirname($a); }
-
         // get info for the currently logged in user
         $current_user = wp_get_current_user();
 
-        self::_addLogEvent(5000,$current_user->ID, WPPHUtil::getIP(), serialize(array($b,$a)));
-        wpphLog('Plugin activated.', array('plugin file'=>$a));
+        // activate one by link
+        if(! empty($_GET['action']) && ($_GET['action']=='activate') || !empty($_GET['action2']) && ($_GET['action2']=='activate'))
+        {
+            $pluginFile = $_GET['plugin'];
+            $pluginData = get_plugin_data(WP_PLUGIN_DIR.'/'.$pluginFile,false,false);
+            $pluginName = $pluginData['Name'];
+            self::_addLogEvent(5001,$current_user->ID, WPPHUtil::getIP(), array($pluginName,$pluginFile));
+            wpphLog('Plugin activated.', array('plugin file'=>$pluginFile));
+        }
+        // one by bulk
+        elseif(isset($_POST['action']) && ($_POST['action'] == 'activate-selected') || isset($_POST['action2']) && ($_POST['action2'] == 'activate-selected'))
+        {
+            if(! empty($_POST['checked']))
+            {
+                foreach($_POST['checked'] as $k=>$pluginFile){
+                    $pluginData = get_plugin_data(WP_PLUGIN_DIR.'/'.$pluginFile,false,false);
+                    $pluginName = $pluginData['Name'];
+                    self::_addLogEvent(5001,$current_user->ID, WPPHUtil::getIP(), array($pluginName,$pluginFile));
+                    wpphLog('Plugin activated.', array('plugin file'=>$pluginFile));
+                }
+            }
+        }
+        // more by bulk
+        elseif(isset($_POST['activate-multi']) && ($_POST['action']=='activate-selected' || $_POST['action2']=='activate-selected'))
+        {
+            if(! empty($_POST['checked']))
+            {
+                foreach($_POST['checked'] as $k=>$pluginFile){
+                    $pluginData = get_plugin_data(WP_PLUGIN_DIR.'/'.$pluginFile,false,false);
+                    $pluginName = $pluginData['Name'];
+                    self::_addLogEvent(5001,$current_user->ID, WPPHUtil::getIP(), array($pluginName,$pluginFile));
+                    wpphLog('Plugin activated.', array('plugin file'=>$pluginFile));
+                }
+            }
+        }
     }
+    // # 5002
     public static function watchPluginDeactivate()
     {
         wpphLog(__METHOD__.'() triggered by hook.');
 
-        // deactivate
-        $a = (empty($_GET['plugin']) ? '' : $_GET['plugin']);
-        $b = '';
-        if(!empty($a)){ $b = dirname($a); }
-
         // get info for the currently logged in user
         $current_user = wp_get_current_user();
 
-        self::_addLogEvent(5001,$current_user->ID, WPPHUtil::getIP(), serialize(array($b,$a)));
-        wpphLog('Plugin deactivated.', array('plugin file'=>$a));
+        // activate one by link
+        if(isset($_GET['action']) && ($_GET['action']=='deactivate') || isset($_GET['action2']) && ($_GET['action2']=='deactivate'))
+        {
+            $pluginFile = $_GET['plugin'];
+            $pluginData = get_plugin_data(WP_PLUGIN_DIR.'/'.$pluginFile,false,false);
+            $pluginName = $pluginData['Name'];
+            self::_addLogEvent(5002,$current_user->ID, WPPHUtil::getIP(), array($pluginName,$pluginFile));
+            wpphLog('Plugin deactivated.', array('plugin file'=>$pluginFile));
+        }
+        // one by bulk
+        elseif(isset($_POST['action']) && ($_POST['action'] == 'deactivate-selected') || isset($_POST['action2']) && ($_POST['action2'] == 'deactivate-selected'))
+        {
+            if(! empty($_POST['checked']))
+            {
+                foreach($_POST['checked'] as $k=>$pluginFile){
+                    $pluginData = get_plugin_data(WP_PLUGIN_DIR.'/'.$pluginFile,false,false);
+                    $pluginName = $pluginData['Name'];
+                    self::_addLogEvent(5002,$current_user->ID, WPPHUtil::getIP(), array($pluginName,$pluginFile));
+                    wpphLog('Plugin deactivated.', array('plugin file'=>$pluginFile));
+                }
+            }
+        }
+        // more by bulk
+        elseif(isset($_GET['activate-multi']) && ($_POST['action']=='deactivate-selected' || $_POST['action2']=='deactivate-selected'))
+        {
+            if(! empty($_POST['checked']))
+            {
+                foreach($_POST['checked'] as $k=>$pluginFile){
+                    $pluginData = get_plugin_data(WP_PLUGIN_DIR.'/'.$pluginFile,false,false);
+                    $pluginName = $pluginData['Name'];
+                    self::_addLogEvent(5002,$current_user->ID, WPPHUtil::getIP(), array($pluginName,$pluginFile));
+                    wpphLog('Plugin deactivated.', array('plugin file'=>$pluginFile));
+                }
+            }
+        }
+    }
+    // # 5000
+    public static function watchPluginInstall()
+    {
+        if(empty($_GET)) { return; }
 
+        /**
+         * @internal
+         * @param $pluginName
+         */
+        function wpph_installPlugin($pluginName)
+        {
+            if(! empty($_GET['plugin']))
+            {
+                // get info for the currently logged in user
+                $current_user = wp_get_current_user();
+                WPPHEvent::_addLogEvent(5000,$current_user->ID, WPPHUtil::getIP(), array($pluginName));
+                wpphLog('Plugin installed.', array('plugin'=>$pluginName));
+            }
+        }
+
+        if(isset($_GET['action']) && $_GET['action']=='install-plugin'){
+            wpphLog(__METHOD__.'() triggered by hook.');
+            wpph_installPlugin($_GET['plugin']);
+        }
+        elseif(isset($_GET['action2']) && $_GET['action2']=='install-plugin'){
+            wpphLog(__METHOD__.'() triggered by hook.');
+            wpph_installPlugin($_GET['plugin']);
+        }
+    }
+    // # 5003
+    public static function watchPluginUninstall()
+    {
+        if(empty($_POST)) { return; }
+        if(! isset($_POST['verify-delete'])) { return; }
+        if(empty($_POST['checked'])){ return; }
+
+        $action = '';
+        if(! empty($_POST['action'])){ $action = $_POST['action'];}
+        elseif(! empty($_POST['action2'])){ $action = $_POST['action2'];}
+        if(empty($action) || $action != 'delete-selected') {
+            return;
+        }
+
+        wpphLog(__METHOD__.'() triggered by hook.');
+        // get info for the currently logged in user
+        $current_user = wp_get_current_user();
+        foreach($_POST['checked'] as $pluginFile){
+            $pluginData = get_plugin_data(WP_PLUGIN_DIR.'/'.$pluginFile,false,false);
+            $pluginName = $pluginData['Name'];
+            self::_addLogEvent(5003,$current_user->ID, WPPHUtil::getIP(), array($pluginName,$pluginFile));
+            wpphLog('Plugin uninstalled.', array('plugin file'=>$pluginFile));
+        }
+    }
+    // # 5004
+    public static function watchPluginUpgrade()
+    {
+        // single update/upgrade
+        if(! empty($_GET['action']))
+        {
+            $action = '';
+            if(! empty($_GET['action'])){ $action = $_GET['action'];}
+            elseif(! empty($_GET['action2'])){ $action = $_GET['action2'];}
+            if(empty($action) || $action != 'upgrade-plugin') {
+                return;
+            }
+            wpphLog(__METHOD__.'() triggered by hook.');
+
+            // get info for the currently logged in user
+            $current_user = wp_get_current_user();
+            $pluginFile = $_GET['plugin'];
+            $pluginData = get_plugin_data(WP_PLUGIN_DIR.'/'.$pluginFile,false,false);
+            $pluginName = $pluginData['Name'];
+            // Upgraded the plugin <strong>%s</strong> installed in /<strong>%s</strong>
+            self::_addLogEvent(5004,$current_user->ID, WPPHUtil::getIP(), array($pluginName,$pluginFile));
+            wpphLog('Plugin upgraded.', array('plugin file'=>$pluginFile));
+        }
+        // multi-update/upgrade
+        elseif(! empty($_POST))
+        {
+            $action = '';
+            if(! empty($_POST['action'])){ $action = $_POST['action'];}
+            elseif(! empty($_POST['action2'])){ $action = $_POST['action2'];}
+            if(empty($action) || $action != 'update-selected') { return; }
+            if(empty($_POST['checked'])){ return; }
+            if(empty($_POST['_wp_http_referer'])){ return; }
+            $referrer = $_POST['_wp_http_referer'];
+            if(false === ($pos = stripos($referrer, 'plugins.php'))){
+                return;
+            }
+            wpphLog(__METHOD__.'() triggered by hook.');
+
+            // get info for the currently logged in user
+            $current_user = wp_get_current_user();
+            foreach($_POST['checked'] as $pluginFile){
+                $pluginData = get_plugin_data(WP_PLUGIN_DIR.'/'.$pluginFile,false,false);
+                $pluginName = $pluginData['Name'];
+                self::_addLogEvent(5004,$current_user->ID, WPPHUtil::getIP(), array($pluginName,$pluginFile));
+                wpphLog('Plugin upgraded.', array('plugin file'=>$pluginFile));
+            }
+        }
     }
 
 
-    public static function WatchBlogActivity($newStatus, $oldStatus, $post)
+    public static function watchBlogActivity($newStatus, $oldStatus, $post)
     {
-        $a = func_get_args();
-        wpphLog(__METHOD__.'() triggered by hook.', $a);
+        wpphLog(__FUNCTION__.'. POST DATA', array(
+            '$newStatus' => $newStatus,
+            '$oldStatus' => $oldStatus,
+            '$post' => $post
+        ));
+
+        // IGNORE STATES
+        if($newStatus == 'auto-draft' || $post->post_status == 'auto-draft')
+        {
+            return;
+        }
+
+        // so we skip generating multiple events
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) { return; }
 
         $postID = $post->ID;
-        $hPid = md5($postID);
+        $postTitle = $post->post_title;
+        $postUrl = get_permalink($postID);
+        $postStatus = $post->post_status;
         $currentUserID  = wp_get_current_user()->ID;
         $userID = $postAuthorID = $post->post_author;
         if($currentUserID != $postAuthorID){
@@ -630,132 +915,226 @@ class WPPHEventWatcher extends WPPHEvent
             $userID = $currentUserID;
         }
 
+        if($post->post_type == 'revision'){
+            return;
+        }
+
+        wpphLog(__FUNCTION__.' triggered by hook.');
+
+
+        // CHECK TO SEE IF THIS UPDATE IS FROM THE QUICK EDIT FORM or the default wp post editor
+        if(isset($_POST['original_post_status']))
+        {
+            $originalPostStatus = $_POST['original_post_status'];
+        }
+        else{
+            // quick edit form
+            $originalPostStatus = $_POST['_status'];
+        }
+
+
         // We're dealing with posts
         if($post->post_type == 'post')
         {
-            // if transient exists then this is an update, otherwise this is a new post
-            $value = get_transient($hPid);
-
-            if($newStatus == 'inherit' && $oldStatus == 'new')
+            /**
+             * @@ 2016
+             * Check for category change
+             */
+            if(isset($GLOBALS['WPPH_POST_OLD_CATEGORIES']))
             {
-                if(empty($value))
+                $originalCats = $GLOBALS['WPPH_POST_OLD_CATEGORIES'];
+                $categories_1 = array();
+                foreach($originalCats as $catID){
+                    $cat = get_category($catID);
+                    array_push($categories_1, $cat->name);
+                }
+                $categories_2 = array();
+                $newCats = $post->post_category;
+                if(empty($newCats[0])){
+                    unset($newCats[0]);
+                }
+                foreach($newCats as $catID){
+                    $cat = get_category($catID);
+                    array_push($categories_2, $cat->name);
+                }
+
+                sort($categories_1);
+                sort($categories_2);
+
+                // categories updated
+                if($categories_1 <> $categories_2)
                 {
-                    //  Created a new blog post called %Post Title%. Blog post ID is %ID%
-                    self::_addLogEvent(2000, $userID, WPPHUtil::getIP(), serialize(array($post->post_title,$postID)));
-                    wpphLog('New blog post saved as draft.', array('title'=>$post->post_title));
-                    set_transient($hPid, $postID, 0);
-                    return;
+                    $c1 = implode(', ', $categories_1);
+                    $c2 = implode(', ', $categories_2);
+                    wpph_postCategoriesUpdated(wp_get_current_user()->ID, $postTitle, $c1, $c2);
+                    $GLOBALS['WPPH_EVENT_2016'] = true;
                 }
             }
 
-            // #2000 , #2003
-            if((($oldStatus == $newStatus) == 'draft') && $post->post_status == 'draft')
-            {
-                // so we skip generating multiple events
-                if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) { return; }
-
-                // #2000 : new blog post [as draft]
-                if(empty($value))
-                {
-                    //  Created a new blog post called %Post Title%. Blog post ID is %ID%
-                    self::_addLogEvent(2000, $userID, WPPHUtil::getIP(), serialize(array($post->post_title,$postID)));
-                    wpphLog('New blog post saved as draft.', array('title'=>$post->post_title));
-                    set_transient($hPid, $postID, 0);
-                    return;
-
+            // 2019
+            // check to see whether or not the post author was changed
+            if(isset($GLOBALS['WPPH_POST_AUTHOR_UPDATED'])){
+                $newAuthorID = (int)$GLOBALS['WPPH_POST_AUTHOR_UPDATED'];
+                if(wpph_postAuthorUpdated($newAuthorID, $postID, $userID, $postTitle)){
+                    unset($GLOBALS['WPPH_POST_AUTHOR_UPDATED']);
+                    $GLOBALS['WPPH_EVENT_2019'] = true;
                 }
-                // #2003 : Updated draft post
-                else
-                {
-                    // invalid
-                    if($value != $postID) { return; }
+            }
 
+            // # 2000 - NEW POST AS DRAFT
+            // # 2003 - DRAFT UPDATED
+            if(($oldStatus == 'draft' || $oldStatus == 'auto-draft') && $newStatus == 'draft' && $postStatus == 'draft')
+            {
+                // # 2000 - NEW POST AS DRAFT
+                if($originalPostStatus == 'auto-draft')
+                {
+                    //  New blog post saved as draft
+                    wpph_newPostAsDraft($userID, $postID, $postTitle);
+                }
+                // # 2003 - DRAFT UPDATED
+                elseif($originalPostStatus == 'draft')
+                {
+                    // only if 2016 || 2017 || 2019 were not triggered
+                    if(isset($GLOBALS['WPPH_EVENT_2016']) || isset($GLOBALS['WPPH_EVENT_2017']) || isset($GLOBALS['WPPH_EVENT_2019'])){
+                        return;
+                    }
                     // Modified the draft blog post %post_title%. Blog post ID is %ID%
-                    self::_addLogEvent(2003, $userID, WPPHUtil::getIP(), serialize(array($post->post_title,$postID)));
-                    wpphLog('Draft blog post updated.', array('title'=>$post->post_title));
-                    return;
-
+                    wpph_draftPostUpdated($userID, $postID, $postTitle);
                 }
             }
-            // #2001 : Published a blog post
-            elseif(($oldStatus == 'draft' && $newStatus == 'publish') && $post->post_status == 'publish')
-            {
+            // # 2001 - DRAFT TO PUBLISHED
+            elseif($oldStatus == 'draft' && $newStatus == 'publish' && $postStatus == 'publish'){
                 // Published a blog post called %Post_Title%. Blog post URL is %Post_URL%
-                self::_addLogEvent(2001, $userID, WPPHUtil::getIP(), serialize(array($post->post_title,$post->guid)));
-                wpphLog('Blog post published.', array('title'=>$post->post_title));
-                return;
+                wpph_newPostPublished($userID, $postTitle, $postUrl);
             }
-            // #2002 : Updated published post
-            elseif(($oldStatus == 'publish' && $newStatus == 'publish') && $post->post_status == 'publish')
+            // # 2001 - NEW POST PUBLISHED
+            elseif($oldStatus == 'auto-draft' && $newStatus == 'publish' && $postStatus == 'publish'){
+                // Published a blog post called %Post_Title%. Blog post URL is %Post_URL%
+                wpph_newPostPublished($userID, $postTitle, $postUrl);
+            }
+            // # 2001 - PENDING TO PUBLISHED
+            elseif($oldStatus == 'pending' && $newStatus == 'publish' && $postStatus == 'publish'){
+                // Published a blog post called %Post_Title%. Blog post URL is %Post_URL%
+                wpph_newPostPublished($userID, $postTitle, $postUrl);
+            }
+            // # 2002 - PUBLISHED POST UPDATED
+            elseif($oldStatus == 'publish' && $newStatus == 'publish' && $postStatus == 'publish')
             {
+                // CHECK IF POST URL MODIFIED
+                // ## step 1: see self::hookWatchPostStateBefore()
+                // ## step 2: trigger event
+                // trigger: 2017 - Changed the URL of the post %post_name% from %old_url% to %new_url%
+                if(isset($GLOBALS['WPPH_POST_NEW_URL']))
+                {
+                    if(wpph_postUrlUpdated($GLOBALS['WPPH_POST_NEW_URL'], get_permalink($postID), $userID, $postTitle)){
+                        unset($GLOBALS['WPPH_POST_NEW_URL']);
+                        $GLOBALS['WPPH_EVENT_2017'] = true;
+                    }
+                }
+                // only if 2016 || 2017 || 2019 were not triggered
+                if(isset($GLOBALS['WPPH_EVENT_2016']) || isset($GLOBALS['WPPH_EVENT_2017']) || isset($GLOBALS['WPPH_EVENT_2019'])){
+                    return;
+                }
                 // Modified the published blog post %post_title%. Blog post URL is %post_URL%
-                self::_addLogEvent(2002, $userID, WPPHUtil::getIP(), serialize(array($post->post_title,$post->guid)));
-                wpphLog('Published blog post updated.', array('title'=>$post->post_title));
-                return;
+                wpph_publishedPostUpdated($userID, $postTitle, $postUrl);
+            }
+            // # 2021 - PUBLISHED TO PENDING
+            elseif($oldStatus == 'publish' && $newStatus == 'pending' && $postStatus == 'pending'){
+                wpph_postStatusUpdated('Published', 'Pending Review', $userID, $postTitle);
+            }
+            // # 2021 - PENDING TO DRAFT
+            elseif($oldStatus == 'pending' && $newStatus == 'draft' && $postStatus == 'draft'){
+                wpph_postStatusUpdated('Pending Review', 'Draft', $userID, $postTitle);
+            }
+            // # 2021 - DRAFT TO PENDING
+            elseif($oldStatus == 'draft' && $newStatus == 'pending' && $postStatus == 'pending'){
+                wpph_postStatusUpdated('Draft', 'Pending Review', $userID, $postTitle);
+            }
+            // # 2021 - PUBLISHED TO DRAFT
+            elseif($oldStatus == 'publish' && $newStatus == 'draft' && $postStatus == 'draft'){
+                wpph_postStatusUpdated('Published', 'Draft', $userID, $postTitle);
             }
         }
-
         // We're dealing with pages
         elseif($post->post_type == 'page')
         {
-            // if transient exists then this is an update, otherwise this is a new page
-            $value = get_transient($hPid);
-
-            if($newStatus == 'inherit' && $oldStatus == 'new')
-            {
-                if(empty($value))
-                {
-                    // Created a new page called %page_title%. Page ID is %ID%
-                    self::_addLogEvent(2004, $userID, WPPHUtil::getIP(), serialize(array($post->post_title,$postID)));
-                    set_transient($hPid, $postID, 0);
-                    wpphLog('New page saved as draft.', array('title'=>$post->post_title));
-                    return;
+            // 2020
+            // check to see whether or not the page author was changed
+            if(isset($GLOBALS['WPPH_POST_AUTHOR_UPDATED'])){
+                $newAuthorID = (int)$GLOBALS['WPPH_POST_AUTHOR_UPDATED'];
+                if(wpph_pageAuthorUpdated($newAuthorID, $postID, $userID, $postTitle)){
+                    unset($GLOBALS['WPPH_POST_AUTHOR_UPDATED']);
+                    $GLOBALS['WPPH_EVENT_2020'] = true;
                 }
             }
 
-            // #2004 , #2007
-            if((($oldStatus == $newStatus) == 'draft') && $post->post_status == 'draft')
+            // # 2004 - NEW PAGE AS DRAFT
+            // # 2007 - DRAFT UPDATED
+            if(($oldStatus == 'draft' || $oldStatus == 'auto-draft') && $newStatus == 'draft' && $postStatus == 'draft')
             {
-                // so we skip generating multiple events
-                if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) { return; }
-
-                // #2004 : new page [as draft]
-                if(empty($value))
-                {
-                    // Created a new page called %page_title%. Page ID is %ID%
-                    self::_addLogEvent(2004, $userID, WPPHUtil::getIP(), serialize(array($post->post_title,$postID)));
-                    set_transient($hPid, $postID, 0);
-                    wpphLog('New page saved as draft.', array('title'=>$post->post_title));
-                    return;
-
+                // # 2004 - NEW PAGE AS DRAFT
+                if($originalPostStatus == 'auto-draft'){
+                    wpph_newPageAsDraft($userID, $postID, $postTitle);
                 }
-                // #2007 : Updated draft page
-                else
-                {
-                    // invalid
-                    if($value != $postID) { return; }
-                    // Modified the draft page %page_title%. Page ID is %ID%
-                    self::_addLogEvent(2007, $userID, WPPHUtil::getIP(), serialize(array($post->post_title,$postID)));
-                    wpphLog('Draft page updated.', array('title'=>$post->post_title));
-                    return;
-
+                // # 2007 - DRAFT UPDATED
+                elseif($originalPostStatus == 'draft'){
+                    // only if 2018 || 2020 were not triggered
+                    if(isset($GLOBALS['WPPH_EVENT_2018']) || isset($GLOBALS['WPPH_EVENT_2020'])){
+                        return;
+                    }
+                    wpph_draftPageUpdated($userID, $postID, $postTitle);
                 }
             }
-            // #2005 : Published a page
-            elseif(($oldStatus == 'draft' && $newStatus == 'publish') && $post->post_status == 'publish')
-            {
+            // # 2005 - DRAFT TO PUBLISHED
+            elseif($oldStatus == 'draft' && $newStatus == 'publish' && $postStatus == 'publish'){
+                wpph_newPagePublished($userID, $postTitle, $postUrl);
+            }
+            // # 2005 - NEW PAGE PUBLISHED
+            elseif(($oldStatus == 'draft' || $oldStatus == 'auto-draft') && $newStatus == 'publish' && $postStatus == 'publish'){
                 // Published a page called %page_title%. Page URL is %URL%
-                self::_addLogEvent(2005, $userID, WPPHUtil::getIP(), serialize(array($post->post_title,$post->guid)));
-                wpphLog('Page published.', array('title'=>$post->post_title));
-                return;
+                wpph_newPagePublished($userID, $postTitle, $postUrl);
             }
-            // #2006 : Updated published page
-            elseif(($oldStatus == 'publish' && $newStatus == 'publish') && $post->post_status == 'publish')
+            // # 2005 - PENDING TO PUBLISHED
+            elseif($oldStatus == 'pending' && $newStatus == 'publish' && $postStatus == 'publish'){
+                // Published a page called %page_title%. Page URL is %URL%
+                wpph_newPagePublished($userID, $postTitle, $postUrl);
+            }
+            // # 2006 - PUBLISHED PAGE UPDATED | 2018, 2020
+            elseif($oldStatus == 'publish' && $newStatus == 'publish' && $postStatus == 'publish')
             {
+                // CHECK IF PAGE URL MODIFIED
+                // ## step 1: see self::hookWatchPostStateBefore()
+                // ## step 2: trigger event
+                // trigger: 2018 - Changed the URL of the page %post_name% from %old_url% to %new_url%
+                if(isset($GLOBALS['WPPH_POST_NEW_URL']))
+                {
+                    if(wpph_pageUrlUpdated($GLOBALS['WPPH_POST_NEW_URL'], get_permalink($postID), $userID, $postTitle)){
+                        unset($GLOBALS['WPPH_POST_NEW_URL']);
+                        $GLOBALS['WPPH_EVENT_2018'] = true;
+                    }
+                }
+                // only if 2018 || 2020 were not triggered
+                if(isset($GLOBALS['WPPH_EVENT_2018']) || isset($GLOBALS['WPPH_EVENT_2020'])){
+                    return;
+                }
                 // Modified the published page %page_title%. Page URL is %URL%
-                self::_addLogEvent(2006, $userID, WPPHUtil::getIP(), serialize(array($post->post_title,$post->guid)));
-                wpphLog('Published page updated.', array('title'=>$post->post_title));
-                return;
+                wpph_publishedPageUpdated($userID, $postTitle, $postUrl);
+            }
+            // # 2022 - PUBLISHED TO PENDING
+            elseif($oldStatus == 'publish' && $newStatus == 'pending' && $postStatus == 'pending'){
+                wpph_pageStatusUpdated('Published', 'Pending Review', $userID, $postTitle);
+            }
+            // # 2022 - PENDING TO DRAFT
+            elseif($oldStatus == 'pending' && $newStatus == 'draft' && $postStatus == 'draft'){
+                wpph_pageStatusUpdated('Pending Review', 'Draft', $userID, $postTitle);
+            }
+            // # 2022 - DRAFT TO PENDING
+            elseif($oldStatus == 'draft' && $newStatus == 'pending' && $postStatus == 'pending'){
+                wpph_pageStatusUpdated('Draft', 'Pending Review', $userID, $postTitle);
+            }
+            // # 2022 - PUBLISHED TO DRAFT
+            elseif($oldStatus == 'publish' && $newStatus == 'draft' && $postStatus == 'draft'){
+                wpph_pageStatusUpdated('Published', 'Draft', $userID, $postTitle);
             }
         }
     }
@@ -763,30 +1142,23 @@ class WPPHEventWatcher extends WPPHEvent
     public static function watchTrash($postID)
     {
         wpphLog(__METHOD__.'() triggered by hook.');
-
         $hPid = md5($postID);
-
         // get info for the currently logged in user
         $current_user = wp_get_current_user();
-
         global $wpdb;
-
         $postInfo = $wpdb->get_row("SELECT post_title, post_type FROM ".$wpdb->posts." WHERE ID = ".$postID);
         $postTitle = $postInfo->post_title;
         $postType = $postInfo->post_type;
-
         if($postType == 'post')
         {
             // Deleted the blog post %Title%. Blog post ID is %ID%
-            self::_addLogEvent(2008, $current_user->ID, WPPHUtil::getIP(), serialize(array($postTitle,$postID)));
-            delete_transient($hPid);
+            self::_addLogEvent(2008, $current_user->ID, WPPHUtil::getIP(), array($postTitle,$postID));
             wpphLog('Blog post deleted.', array('title'=>$postTitle, 'id'=>$postID));
         }
         elseif($postType == 'page')
         {
             // Deleted the page %Title%. Page ID is %ID%
-            self::_addLogEvent(2009, $current_user->ID, WPPHUtil::getIP(), serialize(array($postTitle,$postID)));
-            delete_transient($hPid);
+            self::_addLogEvent(2009, $current_user->ID, WPPHUtil::getIP(), array($postTitle,$postID));
             wpphLog('Page deleted.', array('title'=>$postTitle, 'id'=>$postID));
         }
     }
@@ -795,30 +1167,24 @@ class WPPHEventWatcher extends WPPHEvent
     public static function watchFileUploaded($attachmentID)
     {
         global $wpdb;
-
         // get info for the currently logged in user
         $current_user = wp_get_current_user();
-
         $rowData = $wpdb->get_row("SELECT guid FROM ".$wpdb->posts." WHERE ID = ".$attachmentID);
         $fileName = basename($rowData->guid);
         $dirName = dirname($rowData->guid);
-
         // Uploaded the file %file name$ in %file location%
-        self::_addLogEvent(2010, $current_user->ID, WPPHUtil::getIP(), serialize(array($fileName, $dirName)));
+        self::_addLogEvent(2010, $current_user->ID, WPPHUtil::getIP(), array($fileName, $dirName));
         wpphLog('File uploaded.', array('title'=>$fileName, 'url'=>$dirName));
     }
     // 2011
     public static function watchFileUploadedDeleted($attachmentID)
     {
         global $wpdb;
-
         // get info for the currently logged in user
         $current_user = wp_get_current_user();
-
         $rowData = $wpdb->get_row("SELECT post_title, guid FROM ".$wpdb->posts." WHERE ID = ".$attachmentID);
-
         // Deleted file %file name$ from %file_location%
-        self::_addLogEvent(2011, $current_user->ID, WPPHUtil::getIP(), serialize(array($rowData->post_title,dirname($rowData->guid))));
+        self::_addLogEvent(2011, $current_user->ID, WPPHUtil::getIP(), array($rowData->post_title,dirname($rowData->guid)));
         wpphLog('File deleted.', array('title'=>$rowData->post_title, 'url'=>dirname($rowData->guid)));
     }
 
@@ -826,22 +1192,19 @@ class WPPHEventWatcher extends WPPHEvent
     public static function watchFileDeletion($postID)
     {
         global $wpdb;
-
         $postInfo = $wpdb->get_row("SELECT post_title, post_type FROM ".$wpdb->posts." WHERE ID = ".$postID);
         $postTitle = $postInfo->post_title;
         $postType = $postInfo->post_type;
-
         // get info for the currently logged in user
         $userID = wp_get_current_user()->ID;
-
         if('post' == $postType)
         {
-            self::_addLogEvent(2012, $userID, WPPHUtil::getIP(), serialize(array($postTitle)));
+            self::_addLogEvent(2012, $userID, WPPHUtil::getIP(), array($postTitle));
             wpphLog('Post trashed.', array('name'=>$postTitle));
         }
         elseif ('page' == $postType)
         {
-            self::_addLogEvent(2013, $userID, WPPHUtil::getIP(), serialize(array($postTitle)));
+            self::_addLogEvent(2013, $userID, WPPHUtil::getIP(), array($postTitle));
             wpphLog('Page trashed.', array('name'=>$postTitle));
         }
     }
@@ -850,35 +1213,102 @@ class WPPHEventWatcher extends WPPHEvent
     public static function watchTrashUndo($postID)
     {
         global $wpdb;
-
         $postInfo = $wpdb->get_row("SELECT post_title, post_type FROM ".$wpdb->posts." WHERE ID = ".$postID);
         $postTitle = $postInfo->post_title;
         $postType = $postInfo->post_type;
-
         // get info for the currently logged in user
         $userID = wp_get_current_user()->ID;
-
         if('post' == $postType)
         {
-            self::_addLogEvent(2014, $userID, WPPHUtil::getIP(), serialize(array($postTitle)));
+            self::_addLogEvent(2014, $userID, WPPHUtil::getIP(), array($postTitle));
             wpphLog('Post restored from trash.', array('name'=>$postTitle));
         }
         elseif ('page' == $postType)
         {
-            self::_addLogEvent(2015, $userID, WPPHUtil::getIP(), serialize(array($postTitle)));
+            self::_addLogEvent(2015, $userID, WPPHUtil::getIP(), array($postTitle));
             wpphLog('Page restored from trash.', array('name'=>$postTitle));
         }
     }
-
 
     // 3000 - Theme activated
     public static function watchThemeChange($themeName)
     {
         // get info for the currently logged in user
         $current_user = wp_get_current_user();
-
         // // Activated the theme %themeName%
-        self::_addLogEvent(3000, $current_user->ID, WPPHUtil::getIP(), serialize(array($themeName)));
+        self::_addLogEvent(3000, $current_user->ID, WPPHUtil::getIP(), array($themeName));
         wpphLog('Theme activated.', array('name'=>$themeName));
     }
+
+    // 2023 - category created
+    public static function watchCategoryAdd(array $postData)
+    {
+        wpphLog(__METHOD__.'() triggered by hook.');
+
+        if(!empty($_POST['screen']) && !empty($_POST['tag-name']) &&
+            $_POST['screen'] == 'edit-category' &&
+            $_POST['taxonomy'] == 'category' &&
+            $_POST['action'] == 'add-tag')
+        {
+            $categoryName = sanitize_text_field($_POST['tag-name']);
+
+            // get info for the currently logged in user
+            $current_user = wp_get_current_user();
+            // Created a new category called %categoryName%
+            self::_addLogEvent(2023, $current_user->ID, WPPHUtil::getIP(), array($categoryName));
+            wpphLog('Category added.', array('name'=>$categoryName));
+        }
+        // adding the new category when writing a blog post
+        elseif(! empty($_POST['newcategory']) && $_POST['action'] == 'add-category')
+        {
+            $categoryName = sanitize_text_field($_POST['newcategory']);
+
+            // get info for the currently logged in user
+            $current_user = wp_get_current_user();
+            // Created a new category called %categoryName%
+            self::_addLogEvent(2023, $current_user->ID, WPPHUtil::getIP(), array($categoryName));
+            wpphLog('Category added.', array('name'=>$categoryName));
+        }
+    }
+
+    // 2024 - category deleted
+    public static function watchCategoryDelete(array $postData)
+    {
+        wpphLog(__METHOD__.'() triggered by hook.');
+
+        if(empty($postData)){ return; }
+
+        // get info for the currently logged in user
+        $current_user = wp_get_current_user();
+        $userID = $current_user->ID;
+        $userIP = WPPHUtil::getIP();
+
+        //@internal
+        function __alertDeletedCategory($userID, $userIP, $categoryID){
+            $category = get_category($categoryID);
+            $categoryName = $category->cat_name;
+            WPPHEvent::_addLogEvent(2024, $userID, $userIP, array($categoryName));
+            wpphLog('Category deleted.', array('name'=>$categoryName));
+        }
+
+        $action = '';
+        if(! empty($postData['action'])){ $action = $postData['action'];}
+        elseif(! empty($postData['action2'])){ $action = $postData['action2'];}
+        if(empty($action)) {
+            return;
+        }
+
+        // delete one
+        if($action == 'delete-tag' && $postData['taxonomy'] == 'category' && !empty($postData['tag_ID'])){
+            __alertDeletedCategory($userID, $userIP, $postData['tag_ID']);
+        }
+
+        // bulk delete
+        elseif($action == 'delete' && $postData['taxonomy'] == 'category' && !empty($postData['delete_tags'])){
+            foreach($postData['delete_tags'] as $categoryID){
+                __alertDeletedCategory($userID, $userIP, $categoryID);
+            }
+        }
+    }
+
 }

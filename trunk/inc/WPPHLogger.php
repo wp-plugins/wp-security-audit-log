@@ -1,6 +1,6 @@
 <?php
 // custom function
-function wpphLog($message, array $data = array()){ WPPHLogger::write($message,$data); }
+function wpphLog($message, $data=null,$function=null,$line=null){ WPPHLogger::write($message,$data,$function,$line); }
 /*
  * @internal
  * Debug class
@@ -15,10 +15,16 @@ class WPPHLogger
     public static function enableDebugLogging(){ self::$_debugLoggingEnabled = true; }
     public static function enableErrorLogging(){ ini_set('error_log', WPPH_PLUGIN_DIR.'error.log'); }
 
-    public static function write($message, array $data = array())
+    public static function write($message, $data=null,$function=null,$line=null)
     {
         if(!self::$_debugLoggingEnabled) { return; }
         $m = '['.@date("D, M d, Y @H:i:s").'] Debug: '.$message;
+        if(!empty($function)){
+            $m .= PHP_EOL.'Function: '.$function;
+            if(! empty($line)){
+                $m .= PHP_EOL.'Line: '.$line.PHP_EOL;
+            }
+        }
         if(! empty($data)) {
             $m .= ' Data: '.var_export($data, true);
         }

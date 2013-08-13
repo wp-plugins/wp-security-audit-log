@@ -9,7 +9,9 @@ class WPPHDatabase
      * @var bool
      * Whether or not we can safely use the plugin
      */
-    private static $_canRun = true;
+    private static $_canRun = false;
+
+    private static $_canUpgrade = false;
 
     /**
      * @var string
@@ -17,6 +19,7 @@ class WPPHDatabase
      * Holds the name of the event logs table WITHOUT the db prefix!
      */
     private static $_eventsLogTableBaseName = '_wordpress_eventlog';
+
     /**
      * @var string
      * @private
@@ -25,41 +28,153 @@ class WPPHDatabase
     private static $_eventsDetailsTableBaseName = '_wordpress_eventlog_details';
 
 
-    public static function checkTables()
+    private static $_tablesCreated = false;
+    private static $_tablesUpgraded = false;
+    private static $_tablesUpdated = false;
+
+
+    //================================================================================================================
+
+    /**
+     * @temp
+     * @internal
+     * Prepares the tables for v0.2 upgrade as there are some differencies between old & new events
+     */
+    public static function v2Cleanup()
     {
-//#! EVENT DETAILS TABLE
-        if(! self::_createEventDetailsTable()){
-            WPPHAdminNotices::show(0);
-            return false;
+        global $wpdb;
+
+        // empty table 1
+
+        if(self::_eventLogsTableExists())
+        {
+            $query = "TRUNCATE ".$wpdb->prefix.self::$_eventsLogTableBaseName;
+
+            if(false === $wpdb->query($query)){
+                self::$_canUpgrade = false;
+            }
+            else { self::$_canUpgrade = true; }
         }
-        if(! self::_updateEventsDetailsTable()){
-            WPPHAdminNotices::show(1);
-            return false;
+        else { self::$_canUpgrade = true; }
+
+        // empty table 2
+        if(self::_eventDetailsTableExists())
+        {
+            $query = "TRUNCATE ".$wpdb->prefix.self::$_eventsDetailsTableBaseName;
+
+            if(false === $wpdb->query($query)){
+                self::$_canUpgrade = false;
+            }
+            else { self::$_canUpgrade = true; }
         }
-        if(! self::_upgradeEventDetailsTable()){
-            WPPHAdminNotices::show(2);
-            return false;
+        else { self::$_canUpgrade = true; }
+
+        return self::$_canUpgrade;
+    }
+
+
+    public static function handleTables()
+    {
+        if(! self::$_canUpgrade){
+            return 6;
         }
 
-//#! EVENT LOGS MAIN TABLE
-        if(! self::_createEventLogsTable()){
-            WPPHAdminNotices::show(3);
-            return false;
-        }
-        if(! self::_updateEventLogsTable()){
-            WPPHAdminNotices::show(4);
-            return false;
-        }
-        if(! self::_upgradeEventLogsTable()){
-            WPPHAdminNotices::show(5);
-            return false;
+        if(! self::tablesExist())
+        {
+            $result = WPPHDatabase::createTables();
+            if($result !== true){
+                return $result;
+            }
         }
 
-        self::$_canRun = true;
+        $result = self::upgradeTables();
+        if($result !== true){
+            return $result;
+        }
+
+        $result = self::updateTables();
+        if($result !== true){
+            return $result;
+        }
+
+        update_option(WPPH_PLUGIN_DB_UPDATED,1);
         return true;
     }
 
-    public static function canRun() { return self::$_canRun; }
+    // check to see whether or not the tables exist in the database
+    public static function tablesExist()
+    {
+        global $wpdb;
+        $tables = $wpdb->get_results("SHOW TABLES;",ARRAY_N);
+        $t1 = self::getFullTableName('main');
+        $t2 = self::getFullTableName('events');
+        $r1 = $r2 = false;
+        foreach($tables as $table){
+            if(strcasecmp($t1, $table[0])==0){ $r1 = true; }
+            elseif(strcasecmp($t2, $table[0])==0){ $r2 = true; }
+        }
+        if($r1 == true && $r2 == true){
+            self::$_tablesCreated = true;
+            return true;
+        }
+        return false;
+    }
+
+    public static function createTables()
+    {
+        global $wpdb;
+        if(! self::_eventDetailsTableExists()) {
+            $query = self::getCreateQueryEventsDetailsTable();
+            if (false === @$wpdb->query($query)){ return 0; }
+        }
+        if(! self::_eventLogsTableExists()){
+            $query = self::getCreateQueryLogsTable();
+            if(false === @$wpdb->query($query)){return 3;}
+        }
+        return true;
+    }
+
+    public static function upgradeTables()
+    {
+        $optData = get_option(WPPH_PLUGIN_DB_UPDATED);
+        if($optData !== false){
+            if($optData == 1){ return true; }
+        }
+
+        if(! @self::_upgradeEventDetailsTable()){
+            return 2;
+        }
+        if(! @self::_upgradeEventLogsTable()){
+            return 5;
+        }
+        self::$_tablesUpgraded = true;
+        return true;
+    }
+
+    public static function updateTables()
+    {
+        $optData = get_option(WPPH_PLUGIN_DB_UPDATED);
+        if($optData !== false){
+            if($optData == 1){ return true; }
+        }
+
+        if(! @self::_updateEventsDetailsTable()){
+            return 1;
+        }
+        if(! @self::_updateEventLogsTable()){
+            return 4;
+        }
+        self::$_tablesUpdated = true;
+        return true;
+    }
+
+    public static function canRun() {
+        if(self::$_tablesCreated && self::$_tablesUpgraded && self::$_tablesUpdated){
+            self::$_canRun = true;
+        }
+        return self::$_canRun;
+    }
+
 
     /**
      * Returns the full table name db_prefix + base_table_name for the requested table
@@ -80,12 +195,10 @@ class WPPHDatabase
         return '';
     }
 
-
-
     public static function getCreateQueryEventsDetailsTable()
     {
         global $wpdb;
-        $tableName = $wpdb->prefix.self::$_eventsDetailsTableBaseName;
+        $tableName = self::getFullTableName('events');
         return "CREATE TABLE IF NOT EXISTS `$tableName` (
               `EventID` int(8) NOT NULL,
               `EventType` varchar(10) DEFAULT 'NOTICE',
@@ -97,16 +210,13 @@ class WPPHDatabase
 
     public static function getUpdateQueryEventsDetailsTable()
     {
-        global $wpdb;
-        $tableName = $wpdb->prefix.self::$_eventsDetailsTableBaseName;
-
         $out = array();
         $entries = WPPHEvent::listEvents();
         if(empty($entries)){ return $out; }
 
         foreach($entries as $entry)
         {
-            $q = sprintf("INSERT INTO `%s` (`EventID`,`EventType`,`EventDescription`) VALUES(%d,'%s','%s')", $tableName, $entry['id'], $entry['category'], $entry['text']);
+            $q = sprintf("INSERT INTO ".self::getFullTableName('events')." (`EventID`,`EventType`,`EventDescription`) VALUES(%d,'%s','%s')", $entry['id'], $entry['category'], $entry['text']);
             $out["{$entry['id']}"] = $q;
         }
         return $out;
@@ -115,7 +225,7 @@ class WPPHDatabase
     //@todo: UPDATE AS NECESSARY
     public static function getUpgradeQueryEventsDetailsTable()
     {
-        return '';
+        return array();
     }
 
 
@@ -134,14 +244,17 @@ class WPPHDatabase
                   UNIQUE KEY `EventNumber` (`EventNumber`)
                 );";
     }
-
+    // todo: add more events to db here
     public static function getUpdateQueryLogsTable()
     {
         return '';
     }
     public static function getUpgradeQueryLogsTable()
     {
-        return '';
+        return array(
+            "ALTER TABLE ".self::getFullTableName('main')." ADD COLUMN `EventCount` INT NOT NULL DEFAULT 1  AFTER `EventData`;",
+            "ALTER TABLE ".self::getFullTableName('main')." ADD COLUMN `UserName` VARCHAR(125) NOT NULL DEFAULT ''  AFTER `EventCount`;",
+        );
     }
 
 
@@ -150,7 +263,7 @@ class WPPHDatabase
         if(self::_eventDetailsTableExists()) { return true; }
         global $wpdb;
         $query = self::getCreateQueryEventsDetailsTable();
-        if (false === $wpdb->query($wpdb->prepare($query))){ return false; }
+        if (false === @$wpdb->query($query)){ return false; }
         return true;
     }
 
@@ -160,12 +273,18 @@ class WPPHDatabase
     private static function _updateEventsDetailsTable()
     {
         global $wpdb;
+
         $queries = self::getUpdateQueryEventsDetailsTable();
+        if(empty($queries)){
+            return true;
+        }
+
         foreach($queries as $id => $query){
             if(! empty($query)){
-                $var = $wpdb->get_var("SELECT EventID FROM ".self::getFullTableName('events')." WHERE EventID = $id");
+                $var = @$wpdb->get_var("SELECT EventID FROM ".self::getFullTableName('events')." WHERE EventID = $id");
                 if(empty($var)){
-                    if(false === $wpdb->query($query)){
+                    if(false === @$wpdb->query($query)){
+                        wpphLog('QUERY FAILED TO RUN: ',$query);
                         return false;
                     }
                 }
@@ -178,6 +297,17 @@ class WPPHDatabase
     private static function _upgradeEventDetailsTable()
     {
         //EXECUTE THE QUERY FROM self::getUpgradeQueryEventsDetailsTable();
+        $optData = get_option(WPPH_PLUGIN_DB_UPDATED);
+        if($optData !== false){
+            if($optData == 1){ return true; }
+        }
+        $queries = self::getUpgradeQueryEventsDetailsTable();
+        if(empty($queries)){ return true; }
+
+        global $wpdb;
+        foreach($queries as $query){
+            if(false === @$wpdb->query($query)){return false;}
+        }
         return true;
     }
 
@@ -187,7 +317,7 @@ class WPPHDatabase
         if(self::_eventLogsTableExists()){ return true;}
         global $wpdb;
         $query = self::getCreateQueryLogsTable();
-        if(false === $wpdb->query($wpdb->prepare($query))){return false;}
+        if(false === @$wpdb->query($query)){return false;}
         return true;
     }
 
@@ -200,51 +330,34 @@ class WPPHDatabase
     private static function _upgradeEventLogsTable()
     {
         //EXECUTE THE QUERY FROM self::getUpgradeQueryLogsTable();
+        $optData = get_option(WPPH_PLUGIN_DB_UPDATED);
+        if($optData !== false){
+            if($optData == 1){ return true; }
+        }
+        $queries = self::getUpgradeQueryLogsTable();
+        if(empty($queries)){ return true;}
+        global $wpdb;
+
+        foreach($queries as $query){
+            if(false === @$wpdb->query($query)){return false;}
+        }
         return true;
     }
 
     private static function _eventLogsTableExists()
     {
         global $wpdb;
-        $tableName = $wpdb->prefix.self::$_eventsLogTableBaseName;
-        $result = $wpdb->get_var($wpdb->prepare('SELECT EventNumber FROM '.$tableName));
+        $result = @$wpdb->get_var('SELECT EventNumber FROM '.self::getFullTableName('main'));
         return (is_null($result) ? false : true);
 
     }
     private static function _eventDetailsTableExists()
     {
         global $wpdb;
-        $tableName = $wpdb->prefix.self::$_eventsDetailsTableBaseName;
-        $result = $wpdb->get_var($wpdb->prepare('SELECT EventID FROM '.$tableName));
+        $result = @$wpdb->get_var('SELECT EventID FROM '.self::getFullTableName('events'));
         return (is_null($result) ? false : true);
     }
 
-    //!! TODO: CHECK
-    public static function userHasAccessRights()
-    {
-        global $wpdb;
-
-        $rights = $wpdb->get_results("SHOW GRANTS FOR CURRENT_USER()", ARRAY_N);
-
-        if(empty($rights)) return false;
-
-        foreach($rights as $right){
-            if(!empty($right[0])){
-                $r = strtoupper($right[0]);
-                if (preg_match("/GRANT ALL PRIVILEGES/i", $r)) { return true; }
-                else{
-                    if (preg_match_all("/CREATE|DELETE|ALTER|INSERT|UPDATE|SELECT|DELETE/i", $r, $matches)){
-                        if (! empty($matches[0])){
-                            $m = $matches[0];
-                            $m = array_unique($m);
-                            if (count($m) >= 5){ return true; }
-                        }
-                    }
-                }
-            }
-        }
-        return false;
-    }
 }
 
 /**
@@ -269,7 +382,7 @@ class WPPHDB extends WPPHDatabase
     {
         global $wpdb;
 
-        $t = $wpdb->prefix.'users';
+        $t = $wpdb->users;
 
         $username = $wpdb->get_var("SELECT user_login FROM $t WHERE ID=$userID");
         $user = new WP_User( $userID );
@@ -288,8 +401,7 @@ class WPPHDB extends WPPHDatabase
     public static function getEventsCount()
     {
         global $wpdb;
-        $result = $wpdb->get_var("SELECT COUNT(EventNumber) FROM ".self::getFullTableName('main'));
-        return intval($result);
+        return $wpdb->get_var("SELECT COUNT(EventNumber) FROM ".self::getFullTableName('main'));
     }
 
 }

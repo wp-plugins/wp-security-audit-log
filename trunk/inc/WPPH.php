@@ -1,31 +1,33 @@
 <?php
 /**
- * @kyos
  * Base class
  */
 class WPPH
 {
     /**
      * @return bool
-     * Convenient method to check whether or not the plugin can safely run
+     * Convenient method to check whether or not the user has access rights
      */
-    public static function canRun() { return WPPHDatabase::canRun(); }
+    public static function canRun() {
+        if(! WPPHUtil::isAdministrator()){ return false; }
+        // todo: when we add option to select individual admins...
+        //todo...
+        return true;
+    }
     /**
      * @return bool
      * Convenient method to check whether or not the plugin's resources can be loaded
      */
-    public static function canLoad() {
-        if(false === ($pos = stripos($_SERVER['REQUEST_URI'], WPPH_PLUGIN_PREFIX))){ return false; }
-        return true;
-    }
+    public static function canLoad() { return ((false === ($pos = stripos($_SERVER['REQUEST_URI'], WPPH_PLUGIN_PREFIX))) ? false : true); }
 
     public static function loadBaseResources()
     {
         if(self::canLoad())
         {
             wp_enqueue_style('wpph_styles_base', WPPH_PLUGIN_URL . 'res/css/styles.base.css');
-            wp_enqueue_script('wpph-ko-js', WPPH_PLUGIN_URL . 'res/js/knockout-2.2.1.min.js' );
-            wp_enqueue_script('wpph-alvm-js', WPPH_PLUGIN_URL . 'res/js/AuditLogViewModel.js' );
+            wp_enqueue_script('wpph-ko-js', WPPH_PLUGIN_URL . 'res/js/knockout.js' );
+            wp_enqueue_script('wpph-alvm-js', WPPH_PLUGIN_URL . 'res/js/audit-view-model.js' );
+            wp_enqueue_script('wpph-jcookie-js', WPPH_PLUGIN_URL . 'res/js/jquery-ck.js' );
         }
     }
 
@@ -102,6 +104,114 @@ class WPPH
         update_option(WPPH_PLUGIN_SETTING_NAME, $settings);
         wpphLog('Settings saved.', $settings);
     }
+
+    public static function optionExists($optionName) { return (false === get_option($optionName, false) ? false : true); }
+
+    public static function onPluginActivate()
+    {
+        $optErrorData = array();
+        $canContinue = true;
+        // Check: MySQL, PHP - without these there's not much left for this plugin to do
+        if(! self::__checkMySQL()){
+            $optErrorData = self::__addError($optErrorData, 'e400');
+            $canContinue = false;
+        }
+        if(! self::__checkPHP()){
+            $optErrorData = self::__addError($optErrorData, 'e300');
+            $canContinue = false;
+        }
+        // no need for further checks, the plugin cannot run on this server...
+        if(! $canContinue){
+            $optErrorData = self::__addError($optErrorData, 'e500');
+            update_option(WPPH_PLUGIN_ERROR_OPTION_NAME, $optErrorData);
+            return false;
+        }
+
+        // check to see whether or not an upgrade is necessary
+        $v = get_option(WPPH_PLUGIN_VERSION_OPTION_NAME,false);
+        if($v != false)
+        {
+            $v = (float)$v;
+            $cv = (float)WPPH_PLUGIN_VERSION;
+            //#! no need for upgrade
+            if($v == $cv){
+                update_option(WPPH_PLUGIN_VERSION_OPTION_NAME, WPPH_PLUGIN_VERSION);
+                WPPHEvent::hookWatchPluginActivity(); //#! log self installation
+                return true;
+            }
+        }
+
+        if(! WPPHDatabase::v2Cleanup()){
+            $optErrorData = self::__addError($optErrorData, 'e600');
+            update_option(WPPH_PLUGIN_ERROR_OPTION_NAME, $optErrorData);
+            return false;
+        }
+
+        //#! run the upgrade / update
+        if(($result = WPPHDatabase::handleTables()) !== true)
+        {
+            $optErrorData = self::__addError($optErrorData, 'e'.$result);
+        }
+
+        if(empty($optErrorData)){
+            update_option(WPPH_PLUGIN_VERSION_OPTION_NAME, WPPH_PLUGIN_VERSION);
+            WPPHEvent::hookWatchPluginActivity(); //#! log self installation
+            return true;
+        }
+
+        update_option(WPPH_PLUGIN_ERROR_OPTION_NAME, $optErrorData);
+        return false;
+    }
+
+    /**
+     * triggered when the plugin is deactivated
+     */
+    public static function onPluginDeactivate()
+    {
+        if(self::optionExists(WPPH_PLUGIN_ERROR_OPTION_NAME)){ delete_option(WPPH_PLUGIN_ERROR_OPTION_NAME); }
+        if(self::optionExists(WPPH_PLUGIN_SETTING_NAME)){ delete_option(WPPH_PLUGIN_SETTING_NAME); }
+        wp_clear_scheduled_hook(WPPH_PLUGIN_DEL_EVENTS_CRON_TASK_NAME);
+        wpphLog('Plugin deactivated.');
+    }
+
+
+    public static function __addError(array $errorData, $errorCode, $arg=''){
+        $errorData["$errorCode"] = base64_encode($arg);
+        return $errorData;
+    }
+
+    /**
+     * @internal
+     * @static
+     * @var array Holds the list or errors generated during install
+     */
+    private static $_errors = array();
+
+    // must only be called in pages
+    public static function ready()
+    {
+        if(empty(self::$_errors)){
+            self::$_errors = self::getPluginErrors();
+            if(empty(self::$_errors)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static function isInstalled() { return self::optionExists(WPPH_PLUGIN_DB_UPDATED); }
+
+    public static function getPluginErrors() { return get_option(WPPH_PLUGIN_ERROR_OPTION_NAME,null); }
+
+    private static function __checkMySQL(){
+        global $wpdb;
+        $v = $wpdb->get_var("SELECT VERSION();");
+        if(empty($v)){ return false; }
+        $v = trim($v);
+        if(intval($v[0]) < 5){ return false; }
+        return true;
+    }
+    private static function __checkPHP(){ return (version_compare(phpversion(), '5.0.0', '>')); }
 }
 
 
