@@ -36,16 +36,14 @@ class WPPHDatabase
     //================================================================================================================
 
     /**
-     * @temp
      * @internal
-     * Prepares the tables for v0.2 upgrade as there are some differencies between old & new events
+     * Prepares the tables for future upgrades from v0.1
      */
     public static function v2Cleanup()
     {
         global $wpdb;
 
         // empty table 1
-
         if(self::_eventLogsTableExists())
         {
             $query = "TRUNCATE ".$wpdb->prefix.self::$_eventsLogTableBaseName;
@@ -75,10 +73,6 @@ class WPPHDatabase
 
     public static function handleTables()
     {
-        if(! self::$_canUpgrade){
-            return 6;
-        }
-
         if(! self::tablesExist())
         {
             $result = WPPHDatabase::createTables();
@@ -136,8 +130,10 @@ class WPPHDatabase
 
     public static function upgradeTables()
     {
+        wpphLog(__FUNCTION__.'() triggered.');
         $optData = get_option(WPPH_PLUGIN_DB_UPDATED);
         if($optData !== false){
+            wpphLog('Database is already updated.');
             if($optData == 1){ return true; }
         }
 
@@ -153,11 +149,6 @@ class WPPHDatabase
 
     public static function updateTables()
     {
-        $optData = get_option(WPPH_PLUGIN_DB_UPDATED);
-        if($optData !== false){
-            if($optData == 1){ return true; }
-        }
-
         if(! @self::_updateEventsDetailsTable()){
             return 1;
         }
@@ -297,10 +288,6 @@ class WPPHDatabase
     private static function _upgradeEventDetailsTable()
     {
         //EXECUTE THE QUERY FROM self::getUpgradeQueryEventsDetailsTable();
-        $optData = get_option(WPPH_PLUGIN_DB_UPDATED);
-        if($optData !== false){
-            if($optData == 1){ return true; }
-        }
         $queries = self::getUpgradeQueryEventsDetailsTable();
         if(empty($queries)){ return true; }
 
@@ -330,10 +317,6 @@ class WPPHDatabase
     private static function _upgradeEventLogsTable()
     {
         //EXECUTE THE QUERY FROM self::getUpgradeQueryLogsTable();
-        $optData = get_option(WPPH_PLUGIN_DB_UPDATED);
-        if($optData !== false){
-            if($optData == 1){ return true; }
-        }
         $queries = self::getUpgradeQueryLogsTable();
         if(empty($queries)){ return true;}
         global $wpdb;
