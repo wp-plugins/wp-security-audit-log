@@ -1,6 +1,12 @@
 <?php
 class WPPHUtil
 {
+    public static function loadPluggable(){
+        if(! function_exists('user_can')){
+            @include_once(ABSPATH.'wp-includes/pluggable.php');
+        }
+    }
+
     public static function getIP() { return(!empty($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0'); }
 
     /**
