@@ -4,9 +4,11 @@ Plugin Name: WP Security Audit Log
 Plugin URI: http://www.wpwhitesecurity.com/wordpress-security-plugins/wp-security-audit-log/
 Description: Identify WordPress security issues before they become a problem and keep track of everything happening on your WordPress, including WordPress users activity. Similar to Windows Event Log and Linux Syslog, WP Security Audit Log will generate a security alert for everything that happens on your WordPress blog or website. Use the Audit Log Viewer included in the plugin to see all the security alerts.
 Author: WP White Security
-Version: 0.3
+Version: 0.4
 Author URI: http://www.wpwhitesecurity.com/
 License: GPL2
+Text Domain: wp-security-audit-log
+Domain Path: languages/
 
     WP Security Audit Log
     Copyright(c) 2013  Robert Abela  (email : robert@wpwhitesecurity.com)
@@ -24,39 +26,26 @@ License: GPL2
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-//#! Holds the plugin option name
-define('WPPH_PLUGIN_VERSION','0.3');
-define('WPPH_PLUGIN_VERSION_OPTION_NAME','WPPH_PLUGIN_VERSION');
-define('WPPH_PLUGIN_ERROR_OPTION_NAME','WPPH_PLUGIN_ERROR');
-define('WPPH_PLUGIN_SETTING_NAME', 'wpph_plugin_settings');
+// Holds the plugin option name
+define('WPPH_PLUGIN_VERSION','0.4');
 define('WPPH_PLUGIN_PREFIX', 'wpph_');
 define('WPPH_PLUGIN_NAME', 'WP Security Audit Log');
 define('WPPH_PLUGIN_URL', trailingslashit(plugins_url('', __FILE__)));
 define('WPPH_PLUGIN_DIR', trailingslashit(plugin_dir_path(__FILE__)));
 if(defined('__DIR__')) { define('WPPH_PLUGIN_BASE_NAME', basename(__DIR__)); }
 else { define('WPPH_PLUGIN_BASE_NAME', basename(dirname(__FILE__))); }
-define('WPPH_PLUGIN_DB_UPDATED', 'WPPH_PLUGIN_DB_UPDATED');
-define('WPPH_PLUGIN_DEL_EVENTS_CRON_TASK_NAME', 'wpph_plugin_delete_events_cron');
-/** @since v0.3 */
-define('WPPH_USERS_CAN_REGISTER_OPT_NAME', 'wpph_users_can_register');
-/**
- * @since v0.3
- * @see WPPH::onPluginActivate()
- */
-$GLOBALS['WPPH_CAN_RUN'] = true;
 
-
-//#! Load required files
+// Load required files
+require('inc/wpphSettings.php');
 require('inc/WPPHLogger.php');
 require('inc/WPPHUtil.php');
-require('inc/WPPHAdminNotices.php');
 require('inc/WPPHDatabase.php');
 require('inc/WPPHEvent.php');
+require('inc/WPPHPost.php');
 require('inc/WPPH.php');
 require('inc/wpphFunctions.php');
 
-
-//#! 2000
+// 2000
 $GLOBALS['WPPH_POST_IS_NEW'] = false;
 add_action('wp_insert_post', 'wpphPostDetectNew', 1, 2);
 function wpphPostDetectNew($post, $wp_error = false){
@@ -72,39 +61,38 @@ function wpphPostDetectNew($post, $wp_error = false){
  */
 function onPluginUninstall()
 {
-    if(WPPH::optionExists(WPPH_PLUGIN_DB_UPDATED)){ delete_option(WPPH_PLUGIN_DB_UPDATED); }
-    if(WPPH::optionExists(WPPH_PLUGIN_VERSION_OPTION_NAME)){ delete_option(WPPH_PLUGIN_VERSION_OPTION_NAME); }
-    if(WPPH::optionExists(WPPH_USERS_CAN_REGISTER_OPT_NAME)){ delete_option(WPPH_USERS_CAN_REGISTER_OPT_NAME); }
     global $wpdb;
+    delete_option(WPPH_PLUGIN_DB_UPDATED);
+    delete_option(WPPH_PLUGIN_VERSION_OPTION_NAME);
+    delete_option(WPPH_USERS_CAN_REGISTER_OPT_NAME);
     $wpdb->query("DROP TABLE IF EXISTS ".WPPHDatabase::getFullTableName('main'));
     $wpdb->query("DROP TABLE IF EXISTS ".WPPHDatabase::getFullTableName('events'));
 }
-//#! register callbacks
+// register callbacks
 register_activation_hook( __FILE__, array('WPPH', 'onPluginActivate') );
 register_deactivation_hook( __FILE__, array('WPPH', 'onPluginDeactivate') );
 register_uninstall_hook( __FILE__, 'onPluginUninstall' );
 
 // Add custom links on plugins page
-function wpphCustomLinks($links) {
-    return array_merge(array('<a href="admin.php?page=wpph_">Audit Log Viewer </a>', '<a href="admin.php?page=wpph_settings">'.__('Settings').'</a>'), $links);
-}
 add_filter("plugin_action_links_".plugin_basename(__FILE__), 'wpphCustomLinks' );
+// Load text domain
+add_action('plugins_loaded', 'wpphLoadTextDomain');
+// create dashboard widget
+add_action('wp_dashboard_setup', array('WPPHUtil','addDashboardWidget'));
+
 
 // $GLOBALS['WPPH_CAN_RUN']
 // @since v0.3
 // @see WPPH::onPluginActivate()
 if($GLOBALS['WPPH_CAN_RUN'])
 {
-//#! Load the pluggable.php file if needed
+// Load the pluggable.php file if needed
     add_action('admin_init', array('WPPHUtil','loadPluggable'));
-
-//#! Load resources
+// Load resources
     add_action('admin_init', array('WPPH', 'loadBaseResources'));
-
-//#! Add the sidebar menu
+// Add the sidebar menu
     add_action('admin_menu', array('WPPH', 'createPluginWpSidebar'));
-
-//#! Plugin init
+// Plugin init
     add_action('init', 'wpphPluginInit');
     function wpphPluginInit()
     {
@@ -113,8 +101,25 @@ if($GLOBALS['WPPH_CAN_RUN'])
             if(isset($_POST)){
                 //# 6001, 6002, 6003
                 WPPHEvent::hookCheckWpGeneralSettings();
-                if(isset($_POST['action']) && $_POST['action'] == 'editpost'){ $GLOBALS['WPPH_DEFAULT_EDITOR_ENABLED'] = true; }
-                elseif(isset($_POST['screen']) && ($_POST['screen'] == 'edit-post' || $_POST['screen'] == 'edit-page') ){ $GLOBALS['WPPH_SCREEN_EDITOR_ENABLED'] = true;  wpphLog('WPPH_SCREEN_EDITOR_ENABLED');}
+                if(isset($_POST)){
+                    if(isset($_POST['action']) && $_POST['action'] == 'editpost'){
+                        wpphLog('WPPH_DEFAULT_EDITOR_ENABLED');
+                        $GLOBALS['WPPH_DEFAULT_EDITOR_ENABLED'] = true;
+                    }
+                    elseif(isset($_POST['screen'])){
+                        if($_POST['screen'] == 'edit-post' || $_POST['screen'] == 'edit-page'){
+                            wpphLog('WPPH_SCREEN_EDITOR_ENABLED');
+                            $GLOBALS['WPPH_SCREEN_EDITOR_ENABLED'] = true;
+                        }
+                        else {// Custom Post type screen
+                            $type = wpph_extractCustomPostType($_POST['screen']);
+                            if(WPPHPost::validatePostType($type)){
+                                wpphLog('WPPH_SCREEN_EDITOR_ENABLED');
+                                $GLOBALS['WPPH_SCREEN_EDITOR_ENABLED'] = true;
+                            }
+                        }
+                    }
+                }
             }
             WPPHEvent::hookWatchPostStateBefore();
             WPPHEvent::hookWatchBlogActivity();
@@ -143,4 +148,4 @@ if($GLOBALS['WPPH_CAN_RUN'])
         WPPHEvent::hookUserRegisterEvent();
     }
 }
-//#! End wp-security-audit-log
+// End wp-security-audit-log

@@ -1,32 +1,33 @@
-<?php if(! WPPH::canRun()){ return; } ?>
+<?php //if(! WPPH::canRun()){ return; } ?>
 <?php
 if(! WPPH::ready())
 {
-    $errors = WPPH::getPLuginErrors();
-    foreach($errors as $k =>$v) { call_user_func(array('WPPHAdminNotices',$k),$v); }
-
+    $errors = WPPH::getPluginErrors();
+    foreach($errors as $error) {
+        wpph_adminNotice($error);
+    }
     echo '<div id="wpph-pageWrapper" class="wrap">';
-    echo '<p>We have encountered some errors during the installation of the plugin which you can find above.</p>';
-    echo '<p>Please try to correct them and then reactivate the plugin.</p>';
+    echo '<p>'.__('We have encountered some errors during the installation of the plugin which you can find above.',WPPH_PLUGIN_TEXT_DOMAIN).'</p>';
+    echo '<p>'.__('Please try to correct them and then reactivate the plugin.',WPPH_PLUGIN_TEXT_DOMAIN).'</p>';
     echo '</div>';
     return;
 }
 ?>
 
 <div id="wpph-pageWrapper" class="wrap">
-    <h2 class="pageTitle pageTitle-eventViewer"><?php echo __('Audit Log Viewer');?></h2>
+    <h2 class="pageTitle pageTitle-eventViewer">Audit Log Viewer</h2>
     <div id="EventViewerWrapper">
         <div style="overflow: hidden; display: block; clear: both;">
             <div class="tablenav top" style="overflow: hidden; padding: 4px 0;">
                 <div class="alignleft">
                     <div style="overflow: hidden;">
-                        <input type="button" class="buttonRefreshEventsList button" value="<?php echo __('Refresh Events List');?>"
+                        <input type="button" class="buttonRefreshEventsList button" value="<?php echo __('Refresh Events List',WPPH_PLUGIN_TEXT_DOMAIN);?>"
                                style="float: left; display: block;" data-bind="disable: loading, click: cleanRefresh"/>
                         <span class="ajaxLoaderWrapper" style="float: left; display: block; width: 20px; height: 20px; padding: 7px 7px;"><img/></span>
                     </div>
                 </div>
                 <div class="alignleft actions" style="overflow: hidden;">
-                    <label class="alignleft" style="margin: 5px 5px 0 0;"><?php echo __('Number of events per page:');?></label>
+                    <label class="alignleft" style="margin: 5px 5px 0 0;"><?php echo __('Number of events per page:',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
                     <select name="actionLimit1" class="actionLimit" data-bind="options: availablePageSize, value: selectedPageSize"></select>
                     <input type="button" value="Apply" class="button action" data-bind="disable: loading, click: applyPageSize">
                 </div>
@@ -69,7 +70,7 @@ if(! WPPH::ready())
                 </tr>
             </tfoot>
             <tbody id="the-list">
-                <tr data-bind="if: events().length == 0"><td style="padding: 4px !important;" colspan="7"><?php echo __('No events');?></td></tr>
+                <tr data-bind="if: events().length == 0"><td style="padding: 4px !important;" colspan="7"><?php echo __('No events',WPPH_PLUGIN_TEXT_DOMAIN);?></td></tr>
                 <!-- ko foreach: events -->
                 <tr data-bind="css: {'row-0': ($index() % 2) == 0, 'row-1': ($index() % 2) != 0}">
                     <td class="column-event_number"><span data-bind="text: eventNumber"></span></td>
@@ -87,13 +88,13 @@ if(! WPPH::ready())
             <div class="tablenav top" style="overflow: hidden; padding: 4px 0;">
                 <div class="alignleft">
                     <div style="overflow: hidden;">
-                        <input type="button" class="buttonRefreshEventsList button" value="<?php echo __('Refresh Events List');?>"
+                        <input type="button" class="buttonRefreshEventsList button" value="<?php echo __('Refresh Events List',WPPH_PLUGIN_TEXT_DOMAIN);?>"
                                style="float: left; display: block;" data-bind="disable: loading, click: cleanRefresh"/>
                         <span class="ajaxLoaderWrapper" style="float: left; display: block; width: 20px; height: 20px; padding: 7px 7px;"><img/></span>
                     </div>
                 </div>
                 <div class="alignleft actions" style="overflow: hidden;">
-                    <label class="alignleft" style="margin: 5px 5px 0 0;"><?php echo __('Number of events per page:');?></label>
+                    <label class="alignleft" style="margin: 5px 5px 0 0;"><?php echo __('Number of events per page:',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
                     <select name="actionLimit1" class="actionLimit" data-bind="options: availablePageSize, value: selectedPageSize"></select>
                     <input type="button" value="Apply" class="button action" data-bind="disable: loading, click: applyPageSize">
                 </div>
