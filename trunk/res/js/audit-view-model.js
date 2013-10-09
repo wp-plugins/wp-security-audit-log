@@ -55,12 +55,12 @@ var AuditLogViewModel = (function($) {
     function AuditLogViewModel()
     {
         this.columns = ko.observableArray([
-            {columnHeader: 'Event', columnName: 'EventNumber', sortable: true, columnWidth: '80px', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
-            {columnHeader: 'ID', columnName: 'EventID', sortable: true, columnWidth: '80px', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
-            {columnHeader: 'Date', columnName: 'EventDate', sortable: true, columnWidth: '170px', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
-            {columnHeader: 'Type', columnName: 'EventType', sortable: true, columnWidth: '100px', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
-            {columnHeader: 'IP Address', columnName: 'UserIP', sortable: true, columnWidth: '130px', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
-            {columnHeader: 'User', columnName: 'UserID', sortable: true, columnWidth: '240px', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
+            {columnHeader: 'Event', columnName: 'EventNumber', sortable: true, columnWidth: '5%', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
+            {columnHeader: 'ID', columnName: 'EventID', sortable: true, columnWidth: '5%', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
+            {columnHeader: 'Date', columnName: 'EventDate', sortable: true, columnWidth: '11%', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
+            {columnHeader: 'Type', columnName: 'EventType', sortable: true, columnWidth: '6%', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
+            {columnHeader: 'IP Address', columnName: 'UserIP', sortable: true, columnWidth: '9%', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
+            {columnHeader: 'User', columnName: 'UserID', sortable: true, columnWidth: '10%', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
             {columnHeader: 'Description', columnName: 'EventDescription', sortable: false, columnWidth: 'auto', sorted: ko.observable(false), sortedDescending: ko.observable(false)}]);
 
         this.loading = ko.observable(false);

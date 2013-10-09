@@ -35,137 +35,65 @@ class WPPHDatabase
 
     //================================================================================================================
 
-    /**
-     * @internal
-     * Prepares the tables for future upgrades from v0.1
-     */
-    public static function v2Cleanup()
+    static function handleDatabase()
     {
-        global $wpdb;
-
-        // empty table 1
-        if(self::_eventLogsTableExists())
-        {
-            $query = "TRUNCATE ".$wpdb->prefix.self::$_eventsLogTableBaseName;
-
-            if(false === $wpdb->query($query)){
-                self::$_canUpgrade = false;
-            }
-            else { self::$_canUpgrade = true; }
-        }
-        else { self::$_canUpgrade = true; }
-
-        // empty table 2
-        if(self::_eventDetailsTableExists())
-        {
-            $query = "TRUNCATE ".$wpdb->prefix.self::$_eventsDetailsTableBaseName;
-
-            if(false === $wpdb->query($query)){
-                self::$_canUpgrade = false;
-            }
-            else { self::$_canUpgrade = true; }
-        }
-        else { self::$_canUpgrade = true; }
-
-        return self::$_canUpgrade;
-    }
-
-
-    public static function handleTables()
-    {
-        if(! self::tablesExist())
-        {
-            $result = WPPHDatabase::createTables();
-            if($result !== true){
-                return $result;
-            }
-        }
-
-        $result = self::upgradeTables();
-        if($result !== true){
-            return $result;
-        }
-
-        $result = self::updateTables();
-        if($result !== true){
-            return $result;
-        }
-
-        update_option(WPPH_PLUGIN_DB_UPDATED,1);
-        return true;
-    }
-
-    // check to see whether or not the tables exist in the database
-    public static function tablesExist()
-    {
-        global $wpdb;
-        $tables = $wpdb->get_results("SHOW TABLES;",ARRAY_N);
-        $t1 = self::getFullTableName('main');
-        $t2 = self::getFullTableName('events');
-        $r1 = $r2 = false;
-        foreach($tables as $table){
-            if(strcasecmp($t1, $table[0])==0){ $r1 = true; }
-            elseif(strcasecmp($t2, $table[0])==0){ $r2 = true; }
-        }
-        if($r1 == true && $r2 == true){
+        // Check database
+        $dbUpdated = get_option(WPPH_PLUGIN_DB_UPDATED);
+        if(false !== $dbUpdated){
             self::$_tablesCreated = true;
+            self::$_tablesUpgraded = true;
+            self::$_tablesUpdated = true;
+            self::$_canRun = true;
             return true;
         }
-        return false;
-    }
 
-    public static function createTables()
-    {
         global $wpdb;
-        if(! self::_eventDetailsTableExists()) {
-            $query = self::getCreateQueryEventsDetailsTable();
-            if (false === @$wpdb->query($query)){ return 0; }
-        }
-        if(! self::_eventLogsTableExists()){
-            $query = self::getCreateQueryLogsTable();
-            if(false === @$wpdb->query($query)){return 3;}
-        }
-        return true;
-    }
+        $tableMain = self::getFullTableName('MAIN');
+        $tableEvents = self::getFullTableName('EVENTS');
 
-    public static function upgradeTables()
-    {
-        wpphLog(__FUNCTION__.'() triggered.');
-        $optData = get_option(WPPH_PLUGIN_DB_UPDATED);
-        if($optData !== false){
-            wpphLog('Database is already updated.');
-            if($optData == 1){ return true; }
+        // Check if tables exist
+        if(! self::tableExists($wpdb, $tableMain)){
+            if(! self::_createEventLogsTable($wpdb, $tableMain)){
+                WPPH::__addPluginError(__("Plugin cannot create tables in the WordPress database to store security audit logs. Allow write access to the WordPress database user temporarily to activate this plugin.
+                For more information contact us on support@wpprohelp.com.",WPPH_PLUGIN_TEXT_DOMAIN));
+                return false;
+            }
         }
-
-        if(! @self::_upgradeEventDetailsTable()){
-            return 2;
+        if(! self::tableExists($wpdb, $tableEvents)){
+            if(! self::_createEventDetailsTable($wpdb, $tableEvents)){
+                WPPH::__addPluginError(__("Plugin cannot create tables in the WordPress database to store security audit logs. Allow write access to the WordPress database user temporarily to activate this plugin.
+                For more information contact us on support@wpprohelp.com.",WPPH_PLUGIN_TEXT_DOMAIN));
+                return false;
+            }
         }
-        if(! @self::_upgradeEventLogsTable()){
-            return 5;
+        // Check if tables need to be upgraded
+        if(! self::_upgradeEventLogsTable($wpdb, $tableMain)){
+            return false;
         }
+        if(! self::_upgradeEventDetailsTable($wpdb, $tableEvents)){
+            return false;
+        }
+        // Check if tables need to be updated
+        if(! self::_updateEventsDetailsTable($wpdb, $tableEvents)){
+            WPPH::__addPluginError(sprintf(__("Error updating table <strong>%s</strong>.",WPPH_PLUGIN_TEXT_DOMAIN), $tableEvents));
+            return false;
+        }
+        if(! self::_updateEventLogsTable($wpdb, $tableMain)){
+            WPPH::__addPluginError(sprintf(__("Error updating table <strong>%s</strong>.",WPPH_PLUGIN_TEXT_DOMAIN), $tableMain));
+            return false;
+        }
+        self::$_tablesCreated = true;
         self::$_tablesUpgraded = true;
-        return true;
-    }
-
-    public static function updateTables()
-    {
-        if(! @self::_updateEventsDetailsTable()){
-            return 1;
-        }
-        if(! @self::_updateEventLogsTable()){
-            return 4;
-        }
         self::$_tablesUpdated = true;
+        self::$_canRun = true;
         return true;
     }
 
-    public static function canRun() {
-        if(self::$_tablesCreated && self::$_tablesUpgraded && self::$_tablesUpdated){
-            self::$_canRun = true;
-        }
-        return self::$_canRun;
+    static function tableExists($wpdb, $tableFullName)
+    {
+        $result = $wpdb->get_var("SHOW TABLES LIKE '$tableFullName'");
+        return (is_null($result) ? false : true);
     }
-
 
     /**
      * Returns the full table name db_prefix + base_table_name for the requested table
@@ -174,7 +102,7 @@ class WPPHDatabase
      * events -> to retrieve: db_prefix + self::$_eventsDetailsTableBaseName
      * @return string
      */
-    public static function getFullTableName($what = 'main')
+    static function getFullTableName($what = 'main')
     {
         global $wpdb;
         if(strcasecmp($what, 'MAIN') == 0){
@@ -186,45 +114,47 @@ class WPPHDatabase
         return '';
     }
 
-    public static function getCreateQueryEventsDetailsTable()
+    static function canRun() { return self::$_canRun; }
+
+    /**
+     * @internal
+     * Prepares the tables for future upgrades from v0.1
+     */
+    static function v2Cleanup()
     {
         global $wpdb;
-        $tableName = self::getFullTableName('events');
-        return "CREATE TABLE IF NOT EXISTS `$tableName` (
-              `EventID` int(8) NOT NULL,
-              `EventType` varchar(10) DEFAULT 'NOTICE',
-              `EventDescription` text NOT NULL,
-              PRIMARY KEY (`EventID`),
-              UNIQUE KEY `EventID` (`EventID`)
-            );";
-    }
 
-    public static function getUpdateQueryEventsDetailsTable()
-    {
-        $out = array();
-        $entries = WPPHEvent::listEvents();
-        if(empty($entries)){ return $out; }
+        $t1 = self::getFullTableName('MAIN');
+        $t2 = self::getFullTableName('EVENTS');
 
-        foreach($entries as $entry)
-        {
-            $q = sprintf("INSERT INTO ".self::getFullTableName('events')." (`EventID`,`EventType`,`EventDescription`) VALUES(%d,'%s','%s')", $entry['id'], $entry['category'], $entry['text']);
-            $out["{$entry['id']}"] = $q;
+        // empty table 1
+        $query = "TRUNCATE ". $wpdb->prefix.self::$_eventsLogTableBaseName;
+        if(false === $wpdb->query($query)){
+            WPPH::__addPluginError(
+                sprintf(
+                    __("Plugin could not be properly upgraded because we could not empty the content of the following table: <strong>%s</strong>",WPPH_PLUGIN_TEXT_DOMAIN),$t1)
+                );
+            self::$_canUpgrade = false;
         }
-        return $out;
+        else { self::$_canUpgrade = true; }
+
+        // empty table 2
+        $query = "TRUNCATE ".$wpdb->prefix.self::$_eventsDetailsTableBaseName;
+        if(false === $wpdb->query($query)){
+            WPPH::__addPluginError(
+                sprintf(__("Plugin could not be properly upgraded because we could not empty the content of the following table: <strong>%s</strong>",WPPH_PLUGIN_TEXT_DOMAIN),$t2)
+            );
+            self::$_canUpgrade = false;
+        }
+        else { self::$_canUpgrade = true; }
+
+        return self::$_canUpgrade;
     }
 
-    //@todo: UPDATE AS NECESSARY
-    public static function getUpgradeQueryEventsDetailsTable()
-    {
-        return array();
-    }
 
-
-    public static function getCreateQueryLogsTable()
+    private static function _createEventLogsTable($wpdb, $tableFullName)
     {
-        global $wpdb;
-        $t1 = $wpdb->prefix.self::$_eventsLogTableBaseName;
-        return "CREATE TABLE IF NOT EXISTS `$t1` (
+        $query = "CREATE TABLE IF NOT EXISTS `$tableFullName` (
                   `EventNumber` bigint(40) NOT NULL AUTO_INCREMENT,
                   `EventID` int(8) NOT NULL,
                   `EventDate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -234,113 +164,107 @@ class WPPHDatabase
                   PRIMARY KEY (`EventNumber`),
                   UNIQUE KEY `EventNumber` (`EventNumber`)
                 );";
+        if(false === @$wpdb->query($query)){return false;}
+        return true;
     }
-    // todo: add more events to db here
-    public static function getUpdateQueryLogsTable()
+    private static function _createEventDetailsTable($wpdb, $tableFullName)
     {
-        return '';
-    }
-    public static function getUpgradeQueryLogsTable()
-    {
-        return array(
-            "ALTER TABLE ".self::getFullTableName('main')." ADD COLUMN `EventCount` INT NOT NULL DEFAULT 1  AFTER `EventData`;",
-            "ALTER TABLE ".self::getFullTableName('main')." ADD COLUMN `UserName` VARCHAR(125) NOT NULL DEFAULT ''  AFTER `EventCount`;",
-        );
-    }
-
-
-    private static function _createEventDetailsTable()
-    {
-        if(self::_eventDetailsTableExists()) { return true; }
-        global $wpdb;
-        $query = self::getCreateQueryEventsDetailsTable();
+        $query = "CREATE TABLE IF NOT EXISTS `$tableFullName` (
+              `EventID` int(8) NOT NULL,
+              `EventType` varchar(10) DEFAULT 'NOTICE',
+              `EventDescription` text NOT NULL,
+              PRIMARY KEY (`EventID`),
+              UNIQUE KEY `EventID` (`EventID`)
+            );";
         if (false === @$wpdb->query($query)){ return false; }
         return true;
     }
-
+    private static function _upgradeEventLogsTable($wpdb, $tableFullName)
+    {
+        $q = "SHOW COLUMNS FROM $tableFullName LIKE 'EventCount';";
+        $rowData = $wpdb->get_row($q, ARRAY_A);
+        if(empty($rowData['Field']))
+        {
+            $q = "ALTER TABLE $tableFullName ADD COLUMN `EventCount` INT NOT NULL DEFAULT 1  AFTER `EventData`;";
+            $result = @$wpdb->query($q);
+            if($result === false){
+                WPPH::__addPluginError(
+                    sprintf(__("Plugin could not be properly installed. The db user used to connect to the WordPress database is missing the <strong>ALTER</strong> right for query: <strong>%s</strong>",WPPH_PLUGIN_TEXT_DOMAIN),$q)
+                );
+                return false;
+            }
+            $q = "ALTER TABLE $tableFullName ADD COLUMN `UserName` VARCHAR(125) NOT NULL DEFAULT ''  AFTER `EventCount`;";
+            $result = @$wpdb->query($q);
+            if($result === false){
+                WPPH::__addPluginError(
+                    sprintf(__("Plugin could not be properly installed. The db user used to connect to the WordPress database is missing the <strong>ALTER</strong> right for query: <strong>%s</strong>",WPPH_PLUGIN_TEXT_DOMAIN),$q)
+                );
+                return false;
+            }
+        }
+        return true;
+    }
+    private static function _upgradeEventDetailsTable($wpdb, $tableFullName)
+    {
+        return true;
+    }
     /**
      * This function will insert the default rows in the events details table
      */
-    private static function _updateEventsDetailsTable()
+    private static function _updateEventsDetailsTable($wpdb, $tableFullName)
     {
-        global $wpdb;
+        $queries = array();
+        $events = WPPHEvent::listEvents();
+        if(empty($events)){ return true; }
 
-        $queries = self::getUpdateQueryEventsDetailsTable();
-        if(empty($queries)){
+        // check for differences
+        $numFileEvents = count($events);
+        $numDbEvents = (int)$wpdb->get_var("SELECT COUNT(EventID) FROM $tableFullName;");
+
+        // no update necessary
+        if($numFileEvents == $numDbEvents){
             return true;
         }
 
+        foreach($events as $entry)
+        {
+            $q = sprintf("INSERT INTO $tableFullName (`EventID`,`EventType`,`EventDescription`) VALUES(%d,'%s','%s')", $entry['id'], $entry['category'], $entry['text']);
+            $queries["{$entry['id']}"] = $q;
+        }
+
+        // Clear table
+        if($numDbEvents > 0){
+            $result = @$wpdb->query("TRUNCATE $tableFullName");
+            if($result === false){
+                WPPH::__addPluginError(
+                    sprintf(
+                        __("Could not empty table <strong>%s</strong>. Please run the following query manually: <strong>TRUNCATE %s</strong>",WPPH_PLUGIN_TEXT_DOMAIN)
+                        ,$tableFullName, $tableFullName)
+                    );
+                return false;
+            }
+        }
+        // Insert data
         foreach($queries as $id => $query){
             if(! empty($query)){
-                $var = @$wpdb->get_var("SELECT EventID FROM ".self::getFullTableName('events')." WHERE EventID = $id");
-                if(empty($var)){
-                    if(false === @$wpdb->query($query)){
-                        wpphLog('QUERY FAILED TO RUN: ',$query);
-                        return false;
-                    }
+                if(false === @$wpdb->query($query)){
+                    wpphLog('QUERY FAILED TO RUN: ',$query);
+                    WPPH::__addPluginError(
+                        sprintf(
+                            __("Error updating table <strong>%s</strong> using query: <strong>%s</strong>",WPPH_PLUGIN_TEXT_DOMAIN)
+                            ,$tableFullName, $query)
+                        );
+                    return false;
                 }
             }
         }
         return true;
     }
 
-    //TODO: UPDATE AS NECESSARY
-    private static function _upgradeEventDetailsTable()
-    {
-        //EXECUTE THE QUERY FROM self::getUpgradeQueryEventsDetailsTable();
-        $queries = self::getUpgradeQueryEventsDetailsTable();
-        if(empty($queries)){ return true; }
-
-        global $wpdb;
-        foreach($queries as $query){
-            if(false === @$wpdb->query($query)){return false;}
-        }
-        return true;
-    }
-
-
-    private static function _createEventLogsTable()
-    {
-        if(self::_eventLogsTableExists()){ return true;}
-        global $wpdb;
-        $query = self::getCreateQueryLogsTable();
-        if(false === @$wpdb->query($query)){return false;}
-        return true;
-    }
-
-    private static function _updateEventLogsTable()
+    private static function _updateEventLogsTable($wpdb, $tableFullName)
     {
         return true;
     }
-
-    //TODO: UPDATE AS NECESSARY
-    private static function _upgradeEventLogsTable()
-    {
-        //EXECUTE THE QUERY FROM self::getUpgradeQueryLogsTable();
-        $queries = self::getUpgradeQueryLogsTable();
-        if(empty($queries)){ return true;}
-        global $wpdb;
-
-        foreach($queries as $query){
-            if(false === @$wpdb->query($query)){return false;}
-        }
-        return true;
-    }
-
-    private static function _eventLogsTableExists()
-    {
-        global $wpdb;
-        $result = @$wpdb->get_var('SELECT EventNumber FROM '.self::getFullTableName('main'));
-        return (is_null($result) ? false : true);
-
-    }
-    private static function _eventDetailsTableExists()
-    {
-        global $wpdb;
-        $result = @$wpdb->get_var('SELECT EventID FROM '.self::getFullTableName('events'));
-        return (is_null($result) ? false : true);
-    }
-
 }
 
 /**
@@ -352,7 +276,7 @@ class WPPHDB extends WPPHDatabase
     /**
      * @return string The current logged in user's role
      */
-    public static function getCurrentUserRole()
+    static function getCurrentUserRole()
     {
         global $current_user;
         get_currentuserinfo();
@@ -361,7 +285,7 @@ class WPPHDB extends WPPHDatabase
         return $user_role;
     }
     // returns array(userName, userRole)
-    public static function getUserInfo($userID)
+    static function getUserInfo($userID)
     {
         global $wpdb;
 
@@ -381,11 +305,9 @@ class WPPHDB extends WPPHDatabase
      * Retrieve the total number of events from db
      * @return int
      */
-    public static function getEventsCount()
+    static function getEventsCount()
     {
         global $wpdb;
         return $wpdb->get_var("SELECT COUNT(EventNumber) FROM ".self::getFullTableName('main'));
     }
-
 }
-

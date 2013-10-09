@@ -10,9 +10,8 @@ h2.pageTitle-about { background: url("../img/page-about-logo.png") no-repeat lef
 #wpph-pageWrapper .buttonRefreshEventsList { margin-top: 3px;}
 
 
-
 /*
-* #! Page: Event Viewer
+*  Page: Event Viewer
 */
 .column-left-align { text-align: left; }
 .column-center-align { text-align: center; }
@@ -25,7 +24,7 @@ h2.pageTitle-about { background: url("../img/page-about-logo.png") no-repeat lef
 #the-list span { padding: 5px 5px; line-height: normal !important; display: block; }
 
 /*
-* #! Page: Settings
+*  Page: Settings, Alerts
 */
 .error-info-icon {
     padding: 5px 7px 5px 20px;
@@ -34,17 +33,39 @@ h2.pageTitle-about { background: url("../img/page-about-logo.png") no-repeat lef
     background: url("../img/error-icon.png") no-repeat left center;
 }
 .success-info-icon {
-    padding: 5px 7px 5px 20px;
+    padding: 5px 7px 5px 20px !important;
     margin-left: 8px;
     color: #000000;
     background: url("../img/success-icon.png") no-repeat left center;
 }
 
-.form-section { margin: 7px 0; }
+#section-holder { overflow: hidden; }
+#section-holder p { margin: 15px 0; overflow: hidden; }
+#section-holder p input[type="radio"] { float: left; margin-top: 5px !important; }
+#section-holder p label, #section-holder p span { float: left; margin-top: 4px !important; margin-left: 10px !important; font-size: 12px !important; }
+#section-holder p input[type="text"] { float: left; margin-left: 10px !important; }
 
+.form-table td { line-height: normal !important;; }
+.form-table td.section-left { width: 190px; padding: 0 30px 0 0; }
+.form-table td.section-right p { padding: 0 0 !important; margin: 0 0 !important; }
+.form-table td #optionDW_off { margin-left: 10px; }
+
+#errMessage { margin: 20px 0; }
+#eventsDeletion #description,
+#optionsDescription #description {
+    background: none repeat scroll 0 0 #EEEEEE;
+    margin: 0 0 20px 0;
+    padding: 10px;
+}
+#optionsDescription #description { margin: 20px 0; }
+
+.widefat .item-cb { width: 50px !important; }
+.widefat .item-event { width: 100px !important; text-align: left; padding: 8px 7px 2px 7px !important; }
+.widefat .item-type { width: 100px !important; text-align: left; padding: 8px 7px 2px 7px !important; }
+.widefat .item-description { width: auto !important; text-align: left; padding: 8px 7px 2px 7px !important; }
 
 /*
-* #! Page: Events :: pagination
+*  Page: Events :: pagination
 */
 .paginationWrapper{
     overflow: hidden;

@@ -41,26 +41,36 @@ class WPPH
 
             add_menu_page('WP Security Audit Log', 'WP Security Audit Log', $reqCap, $baseMenuSlug, 'WPPH::pageMain', WPPH_PLUGIN_URL.'res/img/logo-main-menu.png');
             add_submenu_page($baseMenuSlug, 'Audit Log Viewer', 'Audit Log Viewer', $reqCap, $baseMenuSlug, 'WPPH::pageMain');
-            add_submenu_page($baseMenuSlug, 'Settings', __('Settings'), $reqCap, $baseMenuSlug.'settings', 'WPPH::pageSettings');
-            add_submenu_page($baseMenuSlug, 'About', __('About'), $reqCap, $baseMenuSlug.'about', 'WPPH::pageAbout');
-            add_submenu_page($baseMenuSlug, 'Support', __('Support'), $reqCap, $baseMenuSlug.'support', 'WPPH::pageSupport');
+            add_submenu_page($baseMenuSlug, __('Settings',WPPH_PLUGIN_TEXT_DOMAIN), __('Settings',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, $baseMenuSlug.'settings', 'WPPH::pageSettings');
+            add_submenu_page($baseMenuSlug, __('Enable/Disable Alerts',WPPH_PLUGIN_TEXT_DOMAIN), __('Enable/Disable Alerts',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, $baseMenuSlug.'alerts', 'WPPH::pageAlerts');
+            add_submenu_page($baseMenuSlug, __('About',WPPH_PLUGIN_TEXT_DOMAIN), __('About',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, $baseMenuSlug.'about', 'WPPH::pageAbout');
+            add_submenu_page($baseMenuSlug, __('Support',WPPH_PLUGIN_TEXT_DOMAIN), __('Support',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, $baseMenuSlug.'support', 'WPPH::pageSupport');
         }
     }
 
     public static function pageMain() { include(WPPH_PLUGIN_DIR.'pages/dashboard.php'); }
     public static function pageSettings() { include(WPPH_PLUGIN_DIR.'pages/settings.php'); }
+    public static function pageAlerts() {
+        wp_enqueue_style('jquery-smoothness-ui-css', 'http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.21/themes/smoothness/jquery-ui.css');
+        wp_enqueue_script('jquery-ui-core');
+        wp_enqueue_script('jquery-ui-tabs');
+        include(WPPH_PLUGIN_DIR.'pages/alerts.php');
+    }
     public static function pageAbout() { include(WPPH_PLUGIN_DIR.'pages/about.php'); }
     public static function pageSupport() { include(WPPH_PLUGIN_DIR.'pages/support.php'); }
 
     public static function createPluginDefaultSettings()
     {
+        global $wpphEvents;
         $settings = new stdClass();
             $settings->daysToKeep = 0;
-            $settings->eventsToKeep = 10000;
+            $settings->eventsToKeep = WPPH_KEEP_MAX_EVENTS; // default delete option
             $settings->showEventsViewList = 50; // how many items to show in the event viewer by default
             $settings->lastCleanup = time();
             $settings->cleanupRan = 0;
-        add_option(WPPH_PLUGIN_SETTING_NAME, $settings);
+            $settings->logEvents = $wpphEvents; // holds the list of events that will be triggered
+            $settings->showDW = 1; // whether or not to show the dashboard widget. @since v0.4
+        update_option(WPPH_PLUGIN_SETTING_NAME, $settings);
         wpphLog('Settings added.');
     }
     public static function getPluginSettings()
@@ -105,88 +115,109 @@ class WPPH
         wpphLog('Settings saved.', $settings);
     }
 
-    public static function optionExists($optionName) { return (false === get_option($optionName, false) ? false : true); }
-
     public static function onPluginActivate()
     {
-        wpphLog(__FUNCTION__.'() triggered. Checking if the plugin needs to be updated.');
+        wpphLog(__METHOD__.'() triggered.');
 
-        $optErrorData = array();
         $canContinue = true;
 
 // Check: MySQL, PHP - without these there's not much left for this plugin to do
         if(! self::checkMySQL()){
-            $optErrorData = self::__addError($optErrorData, 'e400');
-            update_option(WPPH_PLUGIN_ERROR_OPTION_NAME, $optErrorData);
+            self::__addPluginError(__("Plugin could not be properly installed. The MySQL version installed on this server is less than 5.",WPPH_PLUGIN_TEXT_DOMAIN));
             $canContinue = false;
         }
         if(! self::checkPHP()){
-            $optErrorData = self::__addError($optErrorData, 'e300');
-            update_option(WPPH_PLUGIN_ERROR_OPTION_NAME, $optErrorData);
+            self::__addPluginError(__("Plugin could not be properly installed. The PHP version installed on this server is less than 5.",WPPH_PLUGIN_TEXT_DOMAIN));
             $canContinue = false;
         }
 // no need for further checks, the plugin cannot run on this server...
         if(! $canContinue){
-            $optErrorData = self::__addError($optErrorData, 'e500');
-            update_option(WPPH_PLUGIN_ERROR_OPTION_NAME, $optErrorData);
             $GLOBALS['WPPH_CAN_RUN'] = false;
+            self::__addPluginError(__("Plugin could not be properly installed because the server does not meet our requirements: MySQL and PHP version >= 5.",WPPH_PLUGIN_TEXT_DOMAIN));
             return false;
         }
 
-        $triggerInstall = false;
+        // check to see whether or not an upgrade is necessary
+        global $wpdb;
+        $dbUpdated = get_option(WPPH_PLUGIN_DB_UPDATED);
+        $tablesExist = false;
+        $triggerInstallEvent = false; // whether or not the plugin is installed
+        $pluginDbVersion = get_option(WPPH_PLUGIN_VERSION_OPTION_NAME);
 
-// check to see whether or not an upgrade is necessary
-        $v = get_option(WPPH_PLUGIN_VERSION_OPTION_NAME,false);
-        if($v != false)
+        delete_option(WPPH_PLUGIN_ERROR_OPTION_NAME);
+
+        // first install?
+        if($pluginDbVersion === false){
+            // Check tables
+            if(WPPHDatabase::tableExists($wpdb, WPPHDatabase::getFullTableName('MAIN')) || WPPHDatabase::tableExists($wpdb, WPPHDatabase::getFullTableName('EVENTS'))){
+                $tablesExist = true;
+            }
+            else { $triggerInstallEvent = true; }
+        }
+
+        // if we need to install
+        if($triggerInstallEvent)
         {
-            $v = (float)$v;
-            $cv = (float)WPPH_PLUGIN_VERSION;
-            //#! no need for upgrade
-            if($v == $cv){
-                delete_option(WPPH_PLUGIN_ERROR_OPTION_NAME);
-                update_option(WPPH_PLUGIN_VERSION_OPTION_NAME, WPPH_PLUGIN_VERSION);
-                WPPHEvent::hookWatchPluginActivity(); //#! log self installation
+            if($dbUpdated){ delete_option(WPPH_PLUGIN_DB_UPDATED); }
+            if(WPPHDatabase::handleDatabase()){
+                self::__handlePluginActivation(true);
                 return true;
             }
-        }
-        else { $triggerInstall = true; }
+            else {
+                self::__addPluginError(__("Plugin could not be properly installed because we have encountered errors during the database update.",WPPH_PLUGIN_TEXT_DOMAIN));
+                return false;
+            }
 
-        // check to see whether or not the tables exist - if true, it means the installed version is 0.1
-        // and we need to clear the tables before upgrading them
-        if(WPPHDatabase::tablesExist()){
-            $triggerInstall = false;
-            if(!empty($v) && version_compare($v, '0.2', '<')){
-                wpphLog('Version 0.1 detected. Cleaning out the tables.');
-                if(! WPPHDatabase::v2Cleanup()){
-                    $optErrorData = self::__addError($optErrorData, 'e600');
-                    update_option(WPPH_PLUGIN_ERROR_OPTION_NAME, $optErrorData);
+        }
+        // plugin already installed
+        else
+        {
+            // if tables exist - do update database
+            if($tablesExist)
+            {
+                // check plugin version
+                if(empty($pluginDbVersion))
+                {
+                    if($dbUpdated){ delete_option(WPPH_PLUGIN_DB_UPDATED); }
+                    // maybe version 0.1 ? empty tables
+                    if(! WPPHDatabase::v2Cleanup()){
+                        self::__addPluginError(__("Plugin could not be properly installed because we have encountered errors during the database update.",WPPH_PLUGIN_TEXT_DOMAIN));
+                        return false;
+                    }
+                    // update database
+                    if(WPPHDatabase::handleDatabase()){
+                        self::__handlePluginActivation();
+                        return true;
+                    }
+                    else {
+                        self::__addPluginError(__("Plugin could not be properly installed because we have encountered errors during the database update.",WPPH_PLUGIN_TEXT_DOMAIN));
+                        return false;
+                    }
+                }
+                else {
+                    $pluginDbVersion = (float)$pluginDbVersion;
+                    $currentVersion = (float)WPPH_PLUGIN_VERSION;
+                    // no need for upgrade
+                    if(version_compare($pluginDbVersion, $currentVersion, '==')){
+                        self::__handlePluginActivation();
+                        return true;
+                    }
+                }
+            }
+            // tables not found
+            else {
+                if($dbUpdated){ delete_option(WPPH_PLUGIN_DB_UPDATED); }
+                // create them
+                if(WPPHDatabase::handleDatabase()){
+                    self::__handlePluginActivation();
+                    return true;
+                }
+                else {
+                    self::__addPluginError(__("Plugin could not be properly installed because we have encountered errors during the database update.",WPPH_PLUGIN_TEXT_DOMAIN));
                     return false;
                 }
             }
         }
-
-        //#! run the upgrade / update
-        if(($result = self::wpphDoUpdate()) != true){
-            $optErrorData = self::__addError($optErrorData, 'e'.$result);
-        }
-
-        if(empty($optErrorData)){
-            delete_option(WPPH_PLUGIN_ERROR_OPTION_NAME);
-            update_option(WPPH_PLUGIN_VERSION_OPTION_NAME, WPPH_PLUGIN_VERSION);
-
-            if($triggerInstall){
-                define('WPPH_PLUGIN_INSTALLED_OK',true);
-                $current_user = wp_get_current_user();
-                WPPHEvent::_addLogEvent(5000,$current_user->ID, WPPHUtil::getIP(), array(WPPH_PLUGIN_NAME));
-                wpphLog('Plugin installed.', array('plugin'=>WPPH_PLUGIN_NAME));
-            }
-
-            WPPHEvent::hookWatchPluginActivity(); //#! log self installation
-            return true;
-        }
-
-        update_option(WPPH_PLUGIN_ERROR_OPTION_NAME, $optErrorData);
-        $GLOBALS['WPPH_CAN_RUN'] = false;
         return false;
     }
 
@@ -196,17 +227,40 @@ class WPPH
     public static function onPluginDeactivate()
     {
         wp_clear_scheduled_hook(WPPH_PLUGIN_DEL_EVENTS_CRON_TASK_NAME);
-        if(self::optionExists(WPPH_PLUGIN_ERROR_OPTION_NAME)){ delete_option(WPPH_PLUGIN_ERROR_OPTION_NAME); }
-        if(self::optionExists(WPPH_PLUGIN_SETTING_NAME)){ delete_option(WPPH_PLUGIN_SETTING_NAME); }
+        delete_option(WPPH_PLUGIN_ERROR_OPTION_NAME);
+        delete_option(WPPH_PLUGIN_SETTING_NAME);
         wpphLog('__FUNCTION__.() triggered.');
     }
 
-
-    public static function __addError(array $errorData, $errorCode, $arg=''){
-        $errorData["$errorCode"] = base64_encode($arg);
-        return $errorData;
+    public static function __addPluginError($error){
+        $data = get_option(WPPH_PLUGIN_ERROR_OPTION_NAME);
+        if(empty($data)){
+            $data = array();
+        }
+        $data[] = base64_encode($error);
+        update_option(WPPH_PLUGIN_ERROR_OPTION_NAME, $data);
+        return true;
     }
 
+    private static function __handlePluginActivation($triggerInstallEvent = false)
+    {
+        self::getPluginSettings();
+
+        $GLOBALS['WPPH_CAN_RUN'] = true;
+        update_option(WPPH_PLUGIN_DB_UPDATED,1);
+        delete_option(WPPH_PLUGIN_ERROR_OPTION_NAME);
+        update_option(WPPH_PLUGIN_VERSION_OPTION_NAME, WPPH_PLUGIN_VERSION);
+        if($triggerInstallEvent)
+        {
+            define('WPPH_PLUGIN_INSTALLED_OK',true);
+            $current_user = wp_get_current_user();
+            // log plugin installation
+            WPPHEvent::_addLogEvent(5000,$current_user->ID, WPPHUtil::getIP(), array(WPPH_PLUGIN_NAME));
+            wpphLog('Plugin installed.', array('plugin'=>WPPH_PLUGIN_NAME));
+        }
+        // log plugin activation
+        WPPHEvent::hookWatchPluginActivity();
+    }
     /**
      * @internal
      * @static
@@ -226,19 +280,7 @@ class WPPH
         return false;
     }
 
-    public static function isInstalled() { return self::optionExists(WPPH_PLUGIN_DB_UPDATED); }
-
-    public static function getPluginErrors() { return get_option(WPPH_PLUGIN_ERROR_OPTION_NAME,null); }
-
-    public static function wpphDoUpdate()
-    {
-        wpphLog(__FUNCTION__.'() triggered. Running the update.');
-        if(($result = WPPHDatabase::handleTables()) !== true)
-        {
-            return $result;
-        }
-        return true;
-    }
+    public static function getPluginErrors() { return get_option(WPPH_PLUGIN_ERROR_OPTION_NAME); }
 
     public static function checkMySQL(){
         global $wpdb;
