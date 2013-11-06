@@ -45,6 +45,7 @@ h2.pageTitle-about { background: url("../img/page-about-logo.png") no-repeat lef
 #section-holder p label, #section-holder p span { float: left; margin-top: 4px !important; margin-left: 10px !important; font-size: 12px !important; }
 #section-holder p input[type="text"] { float: left; margin-left: 10px !important; }
 
+.form-table, .form-table td { border: none 0;}
 .form-table td { line-height: normal !important;; }
 .form-table td.section-left { width: 190px; padding: 0 30px 0 0; }
 .form-table td.section-right p { padding: 0 0 !important; margin: 0 0 !important; }

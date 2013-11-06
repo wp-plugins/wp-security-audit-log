@@ -1,19 +1,16 @@
 <?php
 class WPPHUtil
 {
-    static function loadPluggable(){
-        if(! function_exists('user_can')){
-            @include_once(ABSPATH.'wp-includes/pluggable.php');
-        }
-    }
+    static function loadPluggable(){ @include_once(ABSPATH.'wp-includes/pluggable.php'); }
 
     static function getIP() { return(!empty($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0'); }
 
     /**
      * Check to see whether or not the current user is an administrator
+     * @param int $userId
      * @return bool
      */
-    static function isAdministrator(){ return user_can(wp_get_current_user(),'update_core'); }
+    static function isAdministrator($userId=0){ if(empty($userId)){$userId = wp_get_current_user();} return user_can($userId,'administrator'); }
 
     /**
      * Will respond to the ajax requests getting the events
@@ -50,7 +47,7 @@ class WPPHUtil
         $eventsNum = count($events);
 
         if($eventsNum == 0){
-            exit( __formatJsonOutput(array(),__('There are no events to display.',WPPH_PLUGIN_TEXT_DOMAIN)) );
+            exit( __formatJsonOutput(array(),__('There are no security alerts to display.',WPPH_PLUGIN_TEXT_DOMAIN)) );
         }
 
         $out = array();
@@ -109,19 +106,22 @@ class WPPHUtil
 
     static function addDashboardWidget()
     {
-        $settings = WPPH::getPluginSettings();
-        if(! empty($settings->showDW)){
-            wp_add_dashboard_widget('wpphPluginDashboardWidget', __('Latest WordPress Security Alerts').' | WP Security Audit Log', array(get_class(),'createDashboardWidget'));
+        if(! empty(WPPH::getPluginSettings()->showDW))
+        {
+            $currentUser = wp_get_current_user();
+            if(WPPHUtil::isAdministrator($currentUser->ID)|| WPPHUtil::isAllowedAccess($currentUser->ID) || WPPHUtil::isAllowedChange($currentUser->ID)){
+                    wp_add_dashboard_widget('wpphPluginDashboardWidget', __('Latest WordPress Security Alerts').' | WP Security Audit Log', array(get_class(),'createDashboardWidget'));
+            }
         }
     }
     static function createDashboardWidget()
     {
         // get and display data
-        $results = $events = WPPHEvent::getEvents('EventNumber', 'DESC', array(0,5));
+        $results = WPPHEvent::getEvents('EventNumber', 'DESC', array(0,5));
         echo '<div>';
         if(empty($results))
         {
-            echo '<p>'.__('',WPPH_PLUGIN_TEXT_DOMAIN).'</p>';
+            echo '<p>'.__('No alerts found.',WPPH_PLUGIN_TEXT_DOMAIN).'</p>';
         }
         else {
             echo '<table class="wp-list-table widefat" cellspacing="0" cellpadding="0">';
@@ -166,4 +166,114 @@ class WPPHUtil
         echo '</div>';
     }
 
+
+    /**
+     * Check to see whether or not a user has access to view any of the plugin's pages
+     * @since v0.5
+     * @return bool
+     */
+    static function canViewPage()
+    {
+        $currentUser = wp_get_current_user();
+        if(WPPHUtil::isAdministrator($currentUser->ID)|| WPPHUtil::isAllowedAccess($currentUser->ID) || WPPHUtil::isAllowedChange($currentUser->ID)){
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check to see whether or not the current user is allowed to VIEW the plugin
+     * @since v0.5
+     * @return bool
+     */
+    static function isAllowedAccess()
+    {
+        $data = get_option(WPPH_PLUGIN_ALLOW_ACCESS_OPTION_NAME, array());
+        if(empty($data)){return false;}
+        $userID = wp_get_current_user()->ID;
+        $userInfo = WPPHDB::getUserInfo($userID);
+        return (in_array($userInfo['userName'], $data) || in_array($userInfo['userRole'], $data));
+    }
+    /**
+     * Check to see whether or not the current user allowed to CHANGE the plugin's settings
+     * @since v0.5
+     * @return bool
+     */
+    static function isAllowedChange()
+    {
+        $data = get_option(WPPH_PLUGIN_ALLOW_CHANGE_OPTION_NAME, array());
+        if(empty($data)){return false;}
+        $userID = wp_get_current_user()->ID;
+        $userInfo = WPPHDB::getUserInfo($userID);
+        return (in_array($userInfo['userName'], $data) || in_array($userInfo['userRole'], $data));
+    }
+    /**
+     * @param array $data
+     * @since v0.5
+     * @return bool False if value was not updated and true if value was updated.
+     */
+    static function saveAllowAccessUserList(array $data) {return update_option(WPPH_PLUGIN_ALLOW_ACCESS_OPTION_NAME, $data);}
+    /**
+     * @param array $data
+     * @since v0.5
+     * @return bool False if value was not updated and true if value was updated.
+     */
+    static function saveAllowedChangeUserList(array $data){return update_option(WPPH_PLUGIN_ALLOW_CHANGE_OPTION_NAME, $data);}
+
+
+
+    /**
+     * Saves the default list of users with access to plugin
+     * @since v0.5
+     * @return bool
+     */
+    static function saveInitialAccessChangeList(){
+        self::saveAllowAccessUserList(array());
+        self::saveAllowedChangeUserList(array());
+    }
+
+    // ajax
+    static function check_user_role()
+    {
+        // VALIDATE REQUEST
+        $rm = strtoupper($_SERVER['REQUEST_METHOD']);
+        if($rm != 'POST'){ exit(__('Error: Invalid request',WPPH_PLUGIN_TEXT_DOMAIN)); }
+
+        $value = $_POST['check_input'];
+
+        if(empty($value)){
+            exit(__('Error: Invalid request',WPPH_PLUGIN_TEXT_DOMAIN));
+        }
+
+        $value = strtolower($value);
+        $value = stripslashes($value);
+        $value = strip_tags($value);
+        $value = esc_sql($value);
+
+        // check user
+        $result = self::_userExists($value);
+        if ($result){
+            exit('1');
+        }
+        // check role
+        $result = self::_roleExists($value);
+        if ($result){
+            exit('1');
+        }
+        exit('0');
+    }
+
+    static function _userExists($username){
+        global $wpdb;
+        $result = $wpdb->get_var($wpdb->prepare("SELECT `ID` FROM {$wpdb->users} WHERE user_login = '%s' OR display_name = '%s'", $username, $username));
+        if ($result !== false && $result > 0){
+            return true;
+        }
+        return false;
+    }
+
+    static function _roleExists($role){
+        global $wp_roles;
+        return (isset($wp_roles->roles[$role]) ? true : false);
+    }
 }

@@ -4,7 +4,7 @@ Plugin Name: WP Security Audit Log
 Plugin URI: http://www.wpwhitesecurity.com/wordpress-security-plugins/wp-security-audit-log/
 Description: Identify WordPress security issues before they become a problem and keep track of everything happening on your WordPress, including WordPress users activity. Similar to Windows Event Log and Linux Syslog, WP Security Audit Log will generate a security alert for everything that happens on your WordPress blog or website. Use the Audit Log Viewer included in the plugin to see all the security alerts.
 Author: WP White Security
-Version: 0.4
+Version: 0.5
 Author URI: http://www.wpwhitesecurity.com/
 License: GPL2
 Text Domain: wp-security-audit-log
@@ -26,8 +26,7 @@ Domain Path: languages/
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-// Holds the plugin option name
-define('WPPH_PLUGIN_VERSION','0.4');
+define('WPPH_PLUGIN_VERSION','0.5');
 define('WPPH_PLUGIN_PREFIX', 'wpph_');
 define('WPPH_PLUGIN_NAME', 'WP Security Audit Log');
 define('WPPH_PLUGIN_URL', trailingslashit(plugins_url('', __FILE__)));
@@ -65,6 +64,9 @@ function onPluginUninstall()
     delete_option(WPPH_PLUGIN_DB_UPDATED);
     delete_option(WPPH_PLUGIN_VERSION_OPTION_NAME);
     delete_option(WPPH_USERS_CAN_REGISTER_OPT_NAME);
+    delete_option(WPPH_PLUGIN_ALLOW_ACCESS_OPTION_NAME);
+    delete_option(WPPH_PLUGIN_ALLOW_CHANGE_OPTION_NAME);
+    delete_option(WPPH_PLUGIN_SETTING_NAME);
     $wpdb->query("DROP TABLE IF EXISTS ".WPPHDatabase::getFullTableName('main'));
     $wpdb->query("DROP TABLE IF EXISTS ".WPPHDatabase::getFullTableName('events'));
 }
@@ -80,12 +82,16 @@ add_action('plugins_loaded', 'wpphLoadTextDomain');
 // create dashboard widget
 add_action('wp_dashboard_setup', array('WPPHUtil','addDashboardWidget'));
 
-
 // $GLOBALS['WPPH_CAN_RUN']
 // @since v0.3
 // @see WPPH::onPluginActivate()
 if($GLOBALS['WPPH_CAN_RUN'])
 {
+    //Create default settings
+    WPPH::getPluginSettings();
+// Watch widget activity
+    add_action('widgets_init',array('WPPHEventWatcher','watchWidgetMove'));
+    add_action('sidebar_admin_setup', array('WPPHEventWatcher','watchWidgetActivity'));
 // Load the pluggable.php file if needed
     add_action('admin_init', array('WPPHUtil','loadPluggable'));
 // Load resources
@@ -121,6 +127,7 @@ if($GLOBALS['WPPH_CAN_RUN'])
                     }
                 }
             }
+            WPPHEventWatcher::triggerWidgetMoveEvent();
             WPPHEvent::hookWatchPostStateBefore();
             WPPHEvent::hookWatchBlogActivity();
             WPPHEvent::hookWatchCategoryAdd();
@@ -141,6 +148,7 @@ if($GLOBALS['WPPH_CAN_RUN'])
             WPPHEvent::hookWatchPluginActivity();
             /* Enable ajax functionality in the dashboard page */
             add_action('wp_ajax_wpph_get_events', array('WPPHUtil','get_events_html'));
+            add_action('wp_ajax_wpph_check_user_role', array('WPPHUtil','check_user_role'));
         }
         WPPHEvent::hookLoginEvent();
         WPPHEvent::hookLogoutEvent();
