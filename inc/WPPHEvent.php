@@ -106,6 +106,16 @@ class WPPHEvent
             // 2041 - Changed the date of %post_name% custom post from %old_date% to %new_date%
             array( 'id' => 2041, 'category' => WPPH_E_NOTICE_TEXT, 'text' => __('Changed the date of custom post <strong>%s</strong> of type <strong>%s</strong> from <strong>%s</strong> to <strong>%s</strong>.',WPPH_PLUGIN_TEXT_DOMAIN)),
 
+// WIDGETS
+            // 2042 - Added a new %type% widget in %section%
+            array( 'id' => 2042, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('Added a new <strong>%s</strong> widget in <strong>%s</strong>.',WPPH_PLUGIN_TEXT_DOMAIN)),
+            // 2043 - Modified the %type% widget in %section%
+            array( 'id' => 2043, 'category' => WPPH_E_WARNING_TEXT, 'text' => __('Modified the <strong>%s</strong> widget in <strong>%s</strong>.',WPPH_PLUGIN_TEXT_DOMAIN)),
+            // 2044 - Deleted the %type% widget from %section%
+            array( 'id' => 2044, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('Deleted the <strong>%s</strong> widget from <strong>%s</strong>.',WPPH_PLUGIN_TEXT_DOMAIN)),
+            // 2045 - Moved the %type% widget from %old_location% to %new_location%
+            array( 'id' => 2045, 'category' => WPPH_E_NOTICE_TEXT, 'text' => __('Moved the <strong>%s</strong> widget from <strong>%s</strong> to <strong>%s</strong>.',WPPH_PLUGIN_TEXT_DOMAIN)),
+
 // 3xxx - Themes management
             // Activated the theme %themeName%
             array( 'id' => 3000, 'category' => WPPH_E_NOTICE_TEXT, 'text' => __('Activated the theme <strong>%s</strong>.',WPPH_PLUGIN_TEXT_DOMAIN)),
@@ -1411,6 +1421,186 @@ class WPPHEventWatcher extends WPPHEvent
             wpphLog('Post/Page restored from trash.', array('name'=>$postTitle));
         }
     }
+
+    static function watchWidgetActivity()
+    {
+        if ('POST' != strtoupper($_SERVER['REQUEST_METHOD']))
+        {
+            return;
+        }
+        if(!isset($_POST['widget-id']) || empty($_POST['widget-id'])){
+            return;
+        }
+
+        $postData = $_POST;
+
+        wpphLog(__METHOD__.'() triggered by hook.');
+        //wpphLog('POST DATA', $postData);
+
+        global $wp_registered_sidebars;
+        $canCheckSidebar = (empty($wp_registered_sidebars) ? false : true);
+        $userID = wp_get_current_user()->ID;
+
+        // if widget added
+        if(isset($postData['add_new']) && $postData['add_new'] == 'multi')
+        {
+            $widgetType = $postData['id_base'];
+            $sidebar = $postData['sidebar'];
+            if($canCheckSidebar && preg_match("/^sidebar-/",$sidebar)){
+                $sidebar = $wp_registered_sidebars[$sidebar]['name'];
+            }
+            self::_addLogEvent(2042, $userID, WPPHUtil::getIP(), array($widgetType, $sidebar));
+            wpphLog('User added a widget.', array('type'=>$widgetType, 'sidebar'=>$sidebar));
+        }
+        // if widget deleted
+        elseif(isset($postData['delete_widget']) && intval($postData['delete_widget']) == 1)
+        {
+            $widgetType = $postData['id_base'];
+            $sidebar = $postData['sidebar'];
+            if($canCheckSidebar && preg_match("/^sidebar-/",$sidebar)){
+                $sidebar = $wp_registered_sidebars[$sidebar]['name'];
+            }
+            self::_addLogEvent(2044, $userID, WPPHUtil::getIP(), array($widgetType, $sidebar));
+            wpphLog('User deleted a widget.', array('type'=>$widgetType, 'sidebar'=>$sidebar));
+        }
+        // if widget modified
+        elseif(isset($postData['id_base']) && !empty($postData['id_base']))
+        {
+            wpphLog('CHECKING IF WIDGET MODIFIED....');
+            // get info from $_POST
+            $wId = 0;
+            if(! empty($postData['multi_number'])){
+                $wId = intval($postData['multi_number']);
+            }
+            else {
+                if(! empty($postData['widget_number'])){
+                    $wId = intval($postData['widget_number']);
+                }
+            }
+            if(empty($wId)){
+                wpphLog('EMPTY $wId');
+                return;
+            }
+            $wName = $postData['id_base'];
+            $sidebar = $postData['sidebar'];
+            $wData = isset($postData["widget-".$wName][$wId]) ? $postData["widget-".$wName][$wId] : null;
+
+            if(empty($wData)){
+                wpphLog('EMPTY $wData');
+                return;
+            }
+            // get info from db
+            $wdbData = get_option("widget_".$wName);
+            if(empty($wdbData[$wId])){
+                wpphLog('EMPTY $wbData[$wId]');
+                return;
+            }
+            // transform 'on' -> 1
+            foreach($wData as $k=>&$v){
+                if($v == 'on'){ $v = 1; }
+            }
+            // compare - checks for any changes inside widgets
+            $diff = array_diff_assoc($wData, $wdbData[$wId]);
+            $count = count($diff);
+            if($count > 0){
+                if($canCheckSidebar && preg_match("/^sidebar-/",$sidebar)){
+                    $sidebar = $wp_registered_sidebars[$sidebar]['name'];
+                }
+                //wpphLog('DIFF EXISTS.', array('wdata'=>$wData, 'wdbdata'=>$wdbData[$wId], 'diff'=>$diff));
+                self::_addLogEvent(2043, $userID, WPPHUtil::getIP(), array($wName, $sidebar));
+                wpphLog('User modified a widget.', array('type'=>$wName, 'sidebar'=>$sidebar));
+            }
+            else {wpphLog('No change.');}
+        }
+    }
+    //@ 2045
+    static function watchWidgetMove()
+    {
+        if(isset($_POST) && !empty($_POST['sidebars']))
+        {
+            wpphLog('Checking for moved widgets');
+            $crtSidebars = $_POST['sidebars'];
+            $sidebars = array();
+            //-- WP
+            foreach ( $crtSidebars as $key => $val ) {
+                $sb = array();
+                if ( !empty($val) ) {
+                    $val = explode(',', $val);
+                    foreach ( $val as $k => $v ) {
+                        if ( strpos($v, 'widget-') === false ){ continue; }
+                        $sb[$k] = substr($v, strpos($v, '_') + 1);
+                    }
+                }
+                $sidebars[$key] = $sb;
+            }
+            //-- WP
+            $crtSidebars = $sidebars;
+            $dbSidebars = get_option('sidebars_widgets');
+            $wName = $fromSidebar = $toSidebar = '';
+            foreach($crtSidebars as $sidebarName => $values)
+            {
+                if(is_array($values) && ! empty($values))
+                {
+                    if(isset($dbSidebars[$sidebarName]))
+                    {
+                        foreach($values as $i => $widgetName)
+                        {
+                            if(! in_array($widgetName, $dbSidebars[$sidebarName])){
+                                $toSidebar = $sidebarName;
+                                $wName = $widgetName;
+                                foreach($dbSidebars as $name => $v){
+                                    if(is_array($v) && !empty($v)){
+                                        if(in_array($widgetName, $v)){
+                                            $fromSidebar = $name;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if(empty($wName) || empty($fromSidebar) || empty($toSidebar)){
+                wpphLog('No change.');
+                return;
+            }
+
+            $userID = wp_get_current_user()->ID;
+            $ip = WPPHUtil::getIP();
+
+            if(preg_match("/^sidebar-/", $fromSidebar) || preg_match("/^sidebar-/",$toSidebar)){
+                // This option will hold the data needed to trigger the event 2045
+                // as at this moment the $wp_registered_sidebars variable is not yet populated
+                // so we cannot retrieve the name for sidebar-1 || sidebar-2
+                // we will then check for this variable in the triggerWidgetMoveEvent() function
+                $GLOBALS['WPPH_WIDGET_MOVE'] = array('widget'=>$wName, 'from'=>$fromSidebar, 'to'=>$toSidebar, 'user'=>$userID, 'ip', 'ip'=>$ip);
+                wpphLog('Widget moved. Data saved to variable: WPPH_WIDGET_MOVE');
+                return;
+            }
+            self::_addLogEvent(2045, $userID, $ip, array($wName, $fromSidebar, $toSidebar));
+        }
+    }
+
+    static  function triggerWidgetMoveEvent()
+    {
+        wpphLog(__METHOD__.'() triggered.');
+        $data = (isset($GLOBALS['WPPH_WIDGET_MOVE']) ? $GLOBALS['WPPH_WIDGET_MOVE'] : null);
+        if(empty($data)){
+            wpphLog('variable not found: WPPH_WIDGET_MOVE');
+            return;
+        }
+        $from = $data['from'];
+        $to = $data['to'];
+
+        global $wp_registered_sidebars;
+
+        if(preg_match("/^sidebar-/", $from)){ $from = (isset($wp_registered_sidebars[$from]) ? $wp_registered_sidebars[$from]['name'] : $from); }
+        if(preg_match("/^sidebar-/", $to)){ $to = (isset($wp_registered_sidebars[$to]) ? $wp_registered_sidebars[$to]['name'] : $to); }
+
+        self::_addLogEvent(2045, $data['user'], $data['ip'], array($data['widget'], $from, $to));
+    }
+
 
     // 3000 - Theme activated
     static function watchThemeChange($themeName)

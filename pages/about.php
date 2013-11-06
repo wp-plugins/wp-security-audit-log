@@ -1,4 +1,4 @@
-<?php if(! WPPH::canRun()){ return; } ?>
+<?php if(! WPPHUtil::canViewPage()){ return; } ?>
 <?php
     if(! WPPH::ready())
     {

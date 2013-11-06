@@ -1,6 +1,4 @@
-
-<?php if(! WPPH::canRun()){ return; } ?>
-<?php
+<?php if(! WPPHUtil::canViewPage()){ return; } ?><?php
 if(! WPPH::ready())
 {
     $errors = WPPH::getPluginErrors();

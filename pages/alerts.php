@@ -1,4 +1,4 @@
-<?php if(! WPPH::canRun()){ return; } ?>
+<?php if(! WPPHUtil::canViewPage()){ return; } ?>
 <?php
 if(! WPPH::ready())
 {
@@ -15,10 +15,10 @@ if(! WPPH::ready())
 ?>
 <?php
 // defaults
-$opt = WPPH::getPluginSettings();
-$logEvents = $opt->logEvents;
+$defaultEvents = WPPH::getDefaultEvents();
+$logEvents = WPPH::getEvents();
 $validationMessage = array();
-$sectionNames = array_keys($logEvents);
+$sectionNames = (empty($logEvents)) ? array(): array_keys($logEvents);
 $activeTab = 0;
 $rm = strtoupper($_SERVER['REQUEST_METHOD']);
 if('POST' == $rm)
@@ -45,7 +45,7 @@ if('POST' == $rm)
     if(!$hasErrors)
     {
         $logEvents = array();
-        global $wpphEvents;
+        $wpphEvents = WPPH::getEvents();
         foreach($wpphEvents as $category=>$entries){
             $logEvents[$category] = array();
             foreach($entries as $event=>$entry){
@@ -61,9 +61,7 @@ if('POST' == $rm)
                 }
             }
         }
-        $opt->logEvents = $logEvents;
-        $opt->cleanupRan = 0;
-        WPPH::updatePluginSettings($opt,null,null,true);
+        update_option(WPPH_PLUGIN_EVENTS_LIST_OPTION_NAME, $logEvents);
         $validationMessage['success'] = __('Your settings have been saved.',WPPH_PLUGIN_TEXT_DOMAIN);
     }
 }
@@ -73,7 +71,7 @@ if('POST' == $rm)
     <h2 class="pageTitle pageTitle-settings"><?php echo __('Enable/Disable Alerts',WPPH_PLUGIN_TEXT_DOMAIN);?></h2>
 
     <div id="optionsDescription">
-        <p id="description">
+        <p id="description" style="background: none repeat scroll 0 0 #EEEEEE;border: 1px solid #AAAAAA;border-radius: 4px 4px 4px 4px;box-shadow: 2px 2px 3px #DDDDDD;">
             <?php
             echo __('From this page you can enable or disable WordPress security alerts. If a security alert is disabled, an alert will not be generated in the Audit Log Viewer once such action happens.',WPPH_PLUGIN_TEXT_DOMAIN);
             echo '<br/>'.__('To disable a security alert, select the category tab and untick the alert. Click Save Settings when ready.',WPPH_PLUGIN_TEXT_DOMAIN);
@@ -88,50 +86,48 @@ if('POST' == $rm)
         ?>
     <?php endif;?>
 
-    <div id="logEventsTabControl" style="margin: 20px 0;">
+<?php if(!empty($sectionNames)) : ?>
+    <div id="logEventsTabControl" style="margin: 20px 0; opacity: 0;">
         <form id="updateSettingsForm" method="post">
             <?php wp_nonce_field('wpph_update_settings','wpph_update_settings_field_nonce'); ?>
             <?php
-            $sectionNames = array_keys($logEvents);
-            echo '<ul id="tabControlNavBar">';
-            foreach($sectionNames as $item){
-                if($item == 'Login_Logout'){
-                    echo '<li data-id="'.$item.'"><a href="#'.$item.'"/>Login / Logout</a></li>';
+                echo '<ul id="tabControlNavBar">';
+                foreach($sectionNames as $item){
+                    echo '<li data-id="'.$item.'"><a href="#'.$item.'"/>'.str_replace('_',' ', $item).'</a></li>';
                 }
-                else { echo '<li data-id="'.$item.'"><a href="#'.$item.'"/>'.str_replace('_',' ', $item).'</a></li>'; }
-            }
-            echo '</ul>';
+                echo '</ul>';
 
-            global $wpphEvents;
-            foreach($logEvents as $sectionName => $items){
-                echo '<div id="'.$sectionName.'">';
-                echo '<table class="wp-list-table widefat" cellspacing="0" cellpadding="0">';
-                echo '<thead>';
-                    echo '<th class="manage-column column-cb check-column item-cb" scope="col"><input type="checkbox" class="js-select-all"/></th>';
-                    echo '<th class="manage-column column-cb check-column item-event" scope="col">'.__('Event',WPPH_PLUGIN_TEXT_DOMAIN).'</th>';
-                    echo '<th class="manage-column column-cb check-column item-type" scope="col">'.__('Type',WPPH_PLUGIN_TEXT_DOMAIN).'</th>';
-                    echo '<th class="manage-column column-cb check-column item-description" scope="col">'.__('Description',WPPH_PLUGIN_TEXT_DOMAIN).'</th>';
-                echo '</thead>';
-                echo '<tbody>';
-                foreach($items as $item => $enabled){
-                    echo '<tr class="row">';
-                        echo '<th class="manage-column column-cb check-column" scope="row"><input class="item_cb" type="checkbox" '.($enabled ? 'checked="checked"' : '').' value="'.$item.'"/></th>';
-                        echo '<td>'.$item.'</td>';
-                        echo '<td>'.$wpphEvents[$sectionName][$item]['type'].'</td>';
-                        echo '<td>'.$wpphEvents[$sectionName][$item]['text'].'</td>';
-                    echo '</tr>';
+                foreach($logEvents as $sectionName => $items){
+                    echo '<div id="'.$sectionName.'">';
+                    echo '<table class="wp-list-table widefat" cellspacing="0" cellpadding="0">';
+                    echo '<thead>';
+                        echo '<th class="manage-column column-cb check-column item-cb" scope="col"><input type="checkbox" class="js-select-all"/></th>';
+                        echo '<th class="manage-column column-cb check-column item-event" scope="col">'.__('Event',WPPH_PLUGIN_TEXT_DOMAIN).'</th>';
+                        echo '<th class="manage-column column-cb check-column item-type" scope="col">'.__('Type',WPPH_PLUGIN_TEXT_DOMAIN).'</th>';
+                        echo '<th class="manage-column column-cb check-column item-description" scope="col">'.__('Description',WPPH_PLUGIN_TEXT_DOMAIN).'</th>';
+                    echo '</thead>';
+                    echo '<tbody>';
+                    foreach($items as $item => $enabled){
+                        echo '<tr class="row">';
+                            echo '<th class="manage-column column-cb check-column" scope="row"><input class="item_cb" type="checkbox" '.($enabled ? 'checked="checked"' : '').' value="'.$item.'"/></th>';
+                            echo '<td>'.$item.'</td>';
+                            echo '<td>'.(isset($defaultEvents[$sectionName][$item]['type']) ? $defaultEvents[$sectionName][$item]['type'] : '').'</td>';
+                            echo '<td>'.(isset($defaultEvents[$sectionName][$item]['text']) ? $defaultEvents[$sectionName][$item]['text'] : '').'</td>';
+                        echo '</tr>';
+                    }
+                    echo '</tbody>';
+                    echo '</table>';
+                    echo '</div>';
                 }
-                echo '</tbody>';
-                echo '</table>';
-                echo '</div>';
-            }
-            // Events deletion tab
             ?>
-            <input type="submit" id="submitButton" class="button button-primary" value="<?php echo __('Save settings',WPPH_PLUGIN_TEXT_DOMAIN);?>"/>
+            <input type="submit" id="submitButton" class="button button-primary" style="margin: 0 0 12px 19px;" value="<?php echo __('Save settings',WPPH_PLUGIN_TEXT_DOMAIN);?>"/>
             <input type="hidden" id="inputEvents" name="inputEvents" value=""/>
             <input type="hidden" id="activeTab" name="activeTab" value=""/>
         </form>
     </div>
+    <?php else : ?>
+        <div class="error"><p><?php echo __('Error retrieving the list of events from database. Please inform the plugin author about this.',WPPH_PLUGIN_TEXT_DOMAIN);?></p></div>
+    <?php endif; ?>
 </div>
 <br class="clear"/>
 
@@ -141,6 +137,7 @@ if('POST' == $rm)
         var activeTab = $('#activeTab');
         tabControl.tabs();
         tabControl.tabs("option", "active", <?php echo $activeTab;?>);
+        tabControl.css('opacity',1);
         // update select all checkbox
         $('#tabControlNavBar li').each(function(){
             var sectionName = $(this).data('id');

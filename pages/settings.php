@@ -1,4 +1,4 @@
-<?php if(! WPPH::canRun()){ return; } ?>
+<?php //if(! WPPHUtil::canViewPage()){ return; } ?>
 <?php
 if(! WPPH::ready())
 {
@@ -24,6 +24,9 @@ $showDW = (empty($opt->showDW) ? false : true);
 // active delete option for events
 if(!empty($opt->daysToKeep)){ $daysInput = $opt->daysToKeep; $activeOption = 1; }
 if(! empty($opt->eventsToKeep)){ $eventsNumber = $opt->eventsToKeep; $activeOption = 2; }
+$allowedAccess = get_option(WPPH_PLUGIN_ALLOW_ACCESS_OPTION_NAME, array());
+$allowedChange = get_option(WPPH_PLUGIN_ALLOW_CHANGE_OPTION_NAME, array());
+if(! isset($activeOption)){ $activeOption = 2; }
 // end defaults
 
 $rm = strtoupper($_SERVER['REQUEST_METHOD']);
@@ -43,6 +46,25 @@ if('POST' == $rm)
     if(! isset($_POST['deleteEventsValue'])){ wp_die('Invalid request'); }
     $deleteEventsBy = intval($_POST['deleteEventsBy']);
     $deleteEventsValue = intval($_POST['deleteEventsValue']);
+
+    // pre-validate access rules if any
+    if(! empty($_POST['accessListInput'])){
+        $set = $_POST['accessListInput'];
+        $set = str_replace('\\','', $set);
+        $set = json_decode($set);
+        $allowedAccess = $set;
+        // Allowed Access
+        WPPHUtil::saveAllowAccessUserList($allowedAccess);
+    }
+    // pre-validate change rules if any
+    if(! empty($_POST['changeListInput'])){
+        $set = $_POST['changeListInput'];
+        $set = str_replace('\\','', $set);
+        $set = json_decode($set);
+        $allowedChange = $set;
+        // Allowed Change
+        WPPHUtil::saveAllowedChangeUserList($allowedChange);
+    }
 
     // if Delete events older than ... days
     if($deleteEventsBy == 1)
@@ -76,11 +98,11 @@ if('POST' == $rm)
 
         // Validate
         if(!preg_match('/^\d+$/',$deleteEventsValue)){
-            $validationMessage['error'] = sprintf(__('Incorrect number of events. Please specify a value between 1 and %d.',WPPH_PLUGIN_TEXT_DOMAIN), WPPH_KEEP_MAX_EVENTS);
+            $validationMessage['error'] = sprintf(__('Incorrect number of security alerts. Please specify a value between 1 and %d.',WPPH_PLUGIN_TEXT_DOMAIN), WPPH_KEEP_MAX_EVENTS);
             $hasErrors = true;
         }
         elseif($deleteEventsValue < 1 || $deleteEventsValue > WPPH_KEEP_MAX_EVENTS){
-            $validationMessage['error'] = sprintf(__('Incorrect number of events. Please specify a value between 1 and %d.',WPPH_PLUGIN_TEXT_DOMAIN), WPPH_KEEP_MAX_EVENTS);
+            $validationMessage['error'] = sprintf(__('Incorrect number of security alerts. Please specify a value between 1 and %d.',WPPH_PLUGIN_TEXT_DOMAIN), WPPH_KEEP_MAX_EVENTS);
             $hasErrors = true;
         }
         else {
@@ -108,6 +130,26 @@ if('POST' == $rm)
 }
 // end $post
 ?>
+<style type="text/css">
+    .widefat td p { margin: 13px 0 0.8em !important; }
+    .message {
+        background-color: #FFFFE0 !important;
+        border-radius: 3px 3px 3px 3px;
+        border-style: solid;
+        border-width: 1px;
+        border-color: #E6DB55;
+        margin: 5px 0 15px !important;
+        padding: 0 0.6em !important;
+    }
+    .message p { margin: 0 0; padding: 7px 0; font-style: italic; }
+    p.description span { text-decoration: underline;}
+    .the-list th, .the-list tr td {padding: 7px 0 0 0 !important;}
+    .the-list th p, .the-list tr td p {padding: 0 0 !important; margin: 0 0 !important;}
+    .the-list td.column-username p,
+    .the-list td.column-name p,
+    .the-list td.column-role p { padding-left: 7px !important;}
+
+</style>
 <div id="wpph-pageWrapper" class="wrap">
     <h2 class="pageTitle pageTitle-settings"><?php echo __('WP Security Audit Log Settings',WPPH_PLUGIN_TEXT_DOMAIN);?></h2>
 
@@ -119,17 +161,17 @@ if('POST' == $rm)
     <?php else : ?>
         <div id="errMessage" style="display: none;"></div>
     <?php endif;?>
-
     <div style="margin: 20px 0;">
         <form id="updateSettingsForm" method="post">
             <?php wp_nonce_field('wpph_update_settings','wpph_update_settings_field_nonce'); ?>
             <div id="eventsDeletion">
                 <div id="section-holder">
+
                     <table cellspacing="0" cellpadding="0" class="form-table">
                         <tbody>
                             <tr valign="top">
                                 <td rowspan="4" class="section-left">
-                                    <label style="display:block;margin: 30px 0 0 0;"><?php echo __('Security Alerts Pruning',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
+                                    <label style="display:block;margin: 30px 0 0 0;" for="eventsNumberInput"><?php echo __('Security Alerts Pruning',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
                                 </td>
                             </tr>
                             <tr>
@@ -162,7 +204,7 @@ if('POST' == $rm)
                             </tr>
                             <tr><td style="height: 10px;"></td></tr>
                             <tr>
-                                <td rowspan="2" class="section-left"><label><?php echo __('Security Alerts Dashboard Widget',WPPH_PLUGIN_TEXT_DOMAIN);?></label></td>
+                                <td rowspan="2" class="section-left" style=""><label style="display:block;margin: 0 0 0;" for="optionDW_on"><?php echo __('Security Alerts Dashboard Widget',WPPH_PLUGIN_TEXT_DOMAIN);?></label></td>
                             </tr>
                             <tr>
                                 <td class="section-right">
@@ -172,7 +214,189 @@ if('POST' == $rm)
                             </tr>
                         </tbody>
                     </table>
+
+                    <style type="text/css">
+                        .divTarget { padding: 10px 0;}
+                        .tagElement { padding: 2px 4px; margin: 2px 0 0 2px; border: solid 1px #E6DB55; background: #FFFFE0; }
+                        .tagElement .tagDelete { cursor: pointer; font-weight: 900; }
+                        .tagElement .tagDelete:hover { color: #d00000; }
+                        #section-holder #c-list p.description { margin-top: 0 !important; margin-bottom: 0 !important; }
+                    </style>
+                    <table cellspacing="0" cellpadding="0" class="form-table" style="margin-top: 30px;">
+                        <tbody>
+                            <tr valign="top">
+                                <td valign="top" class="section-left">
+                                    <label style="display:block;margin: 12px 0 0 0;" for="inputUser1"><?php echo __('Can view Security Alerts',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
+                                </td>
+                                <td class="section-right">
+                                    <div id="a-list">
+                                        <input type="text" id="inputUser1" style="float: left; display: block; width: 250px;"/>
+                                        <input type="button" id="inputAdd1" style="float: left; display: block;" class="button-primary" value="<?php echo __('Add',WPPH_PLUGIN_TEXT_DOMAIN);?>"/>
+                                        <p class="description" style="clear:both; padding-top: 3px;"><?php echo __('Users and Roles in this list can view the security alerts via the Audit Log Viewer (Read Only)',WPPH_PLUGIN_TEXT_DOMAIN);?></p>
+                                        <div id="accessListTarget" class="divTarget" style="float: none; clear: both;"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                                <tr><td></td><td></td></tr>
+                                <tr><td></td><td></td></tr>
+                            <tr valign="top">
+                                <td valign="top" class="section-left">
+                                    <label style="display:block;margin: 12px 0 0 0;" for="inputUser2"><?php echo __('Can Manage Plugin ',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
+                                </td>
+                                <td class="section-right">
+                                    <div id="c-list">
+                                        <input type="text" id="inputUser2" style="float: left; display: block; width: 250px;"/>
+                                        <input type="button" id="inputAdd2" style="float: left; display: block;" class="button-primary" value="<?php echo __('Add',WPPH_PLUGIN_TEXT_DOMAIN);?>"/>
+                                        <p class="description" style="clear:both; padding-top: 3px;"><?php echo __('Users and Roles in this list can manage the plugin settings.',WPPH_PLUGIN_TEXT_DOMAIN);?></p>
+                                        <div id="changeListTarget" class="divTarget" style="float: none; clear: both;"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <script type="text/javascript">
+                        jQuery(document).ready(function($)
+                        {
+                            var mainContainer1 = $('#a-list'),
+                                inputUser1 = $('#inputUser1'),
+                                inputAdd1 = $('#inputAdd1'),
+                                divTarget1 = $('#accessListTarget'),
+                                tagElement1 = $('.tagElement', mainContainer1),
+
+                                mainContainer2 = $('#c-list'),
+                                inputUser2 = $('#inputUser2'),
+                                inputAdd2 = $('#inputAdd2'),
+                                divTarget2 = $('#changeListTarget'),
+                                tagElement2 = $('.tagElement', mainContainer2)
+                                ;
+
+                            function showDefaultEntries(data, divTarget){
+                                if(data.length > 0){
+                                    $.each(data, function(i,v){
+                                        createTag($, v, divTarget);
+                                    });
+                                }
+                            }
+
+                            // Display the default list
+                            <?php
+                                if(!empty($allowedAccess)){ echo 'showDefaultEntries(["'.implode('","',$allowedAccess).'"],divTarget1);'; }
+                                if(!empty($allowedChange)){ echo 'showDefaultEntries(["'.implode('","',$allowedChange).'"],divTarget2);'; }
+                            ?>
+
+                            function _ajax(string)
+                            {
+                                if(string.length > 0){
+                                    var data = {
+                                        'action': 'wpph_check_user_role',
+                                        'check_input' : string
+                                    };
+                                }
+                                else {
+                                    alert('Please add a user name or role.');
+                                    return false;
+                                }
+                                var result;
+                                $.ajax({
+                                    url: ajaxurl,
+                                    cache: false,
+                                    type: 'POST',
+                                    data: data,
+                                    async : false,
+                                    success: function(response) {
+                                        result = response;
+                                    },
+                                    error: function() {
+                                        result = 'An error occurred. Please try again in a few moments.';
+                                    }
+                                });
+                                return result;
+                            }
+                            function createTag($, value, parentElement){ parentElement.append($('<span class="tagElement"><span class="tagName">'+value+'</span> <span class="tagDelete" title="Delete">x</span></span>')); }
+                            function isValidEntry($, value, targetDiv){
+                                var elements = $('.tagName', targetDiv);
+                                var result = true;
+                                if(elements.length > 0){
+                                    $.each(elements,function(i,v){
+                                        var val = $.trim($(this).text());
+                                        if($.trim(value) == val){
+                                            result = false;
+                                            return false;
+                                        }
+                                    });
+                                }
+                                return result;
+                            }
+                            $('.tagDelete', tagElement1).live('click', function(){ $(this).parent().remove(); });
+                            $('.tagDelete', tagElement2).live('click', function(){ $(this).parent().remove(); });
+                            inputAdd1.on('click', function(){
+                                var val = $.trim(inputUser1.val());
+                                if(val.length == 0){
+                                    alert('Please add a user name or role.');
+                                    return false;
+                                }
+                                if( false == isValidEntry($, val, divTarget1)){
+                                    alert('The user or role has been already added.');
+                                    return false;
+                                }
+                                else {
+                                    var result = _ajax(val);
+                                    if(result.length > 5){
+                                        alert('Error: '+result);
+                                        return false;
+                                    }
+                                    else if (parseInt(result) == 0){
+                                        alert('user or role '+val+' was not found');
+                                        return false;
+                                    }
+                                    createTag($, val, divTarget1);
+                                    inputUser1.val('');
+                                    return true;
+                                }
+                            });
+                            inputUser1.keypress(function(event){
+                                if (event.keyCode == 10 || event.keyCode == 13) {
+                                    event.preventDefault();
+                                    inputAdd1.click();
+                                }
+                            });
+                            inputAdd2.on('click', function(){
+                                var val = $.trim(inputUser2.val());
+                                if(val.length == 0){
+                                    alert('Please add a user name or role.');
+                                    return false;
+                                }
+                                if( false == isValidEntry($, val, divTarget2)){
+                                    alert('The user or role has been already added.');
+                                    return false;
+                                }
+                                else {
+                                    var result = _ajax(val);
+                                    if(result.length > 5){
+                                        alert('Error: '+result);
+                                        return false;
+                                    }
+                                    else if (parseInt(result) == 0){
+                                        alert('user or role '+val+' was not found');
+                                        return false;
+                                    }
+                                    createTag($, val, divTarget2);
+                                    inputUser2.val('');
+                                    return true;
+                                }
+                            });
+                            inputUser2.keypress(function(event){
+                                if (event.keyCode == 10 || event.keyCode == 13) {
+                                    event.preventDefault();
+                                    inputAdd2.click();
+                                }
+                            });
+                        });
+                    </script>
+
                 </div>
+
+
             </div>
             <p style="margin-top: 40px;">
                 <input type="submit" id="submitButton" class="button button-primary" value="<?php echo __('Save settings',WPPH_PLUGIN_TEXT_DOMAIN);?>"/>
@@ -180,6 +404,8 @@ if('POST' == $rm)
             <input type="hidden" id="deleteEventsBy" name="deleteEventsBy" value=""/>
             <input type="hidden" id="deleteEventsValue" name="deleteEventsValue" value=""/>
             <input type="hidden" id="optionDW" name="optionDW" value=""/>
+            <input type="hidden" id="accessListInput" name="accessListInput" value=""/>
+            <input type="hidden" id="changeListInput" name="changeListInput" value=""/>
         </form>
     </div>
 </div>
@@ -247,7 +473,7 @@ if('POST' == $rm)
                     return false;
                 }
                 if(eniVal > <?php echo WPPH_KEEP_MAX_EVENTS;?>){
-                    showErrorMessage("<?php echo sprintf(__('Incorrect number of alerts. Please specify a value between 1 and %d.',WPPH_PLUGIN_TEXT_DOMAIN),WPPH_KEEP_MAX_EVENTS);?>");
+                    showErrorMessage("<?php echo sprintf(__('Incorrect number of security alerts. Please specify a value between 1 and %d.',WPPH_PLUGIN_TEXT_DOMAIN),WPPH_KEEP_MAX_EVENTS);?>");
                     setFocusOn($eventsNumberInput);
                     return false;
                 }
@@ -262,7 +488,9 @@ if('POST' == $rm)
             ,daysInput = $('#daysInput')
             ,eventsNumber = $('#eventsNumberInput')
             ,showDW = $('#optionDW_on')
-            ,hideDW = $('#optionDW_off');
+            ,hideDW = $('#optionDW_off')
+            ,accessListInput = $('#accessListInput')
+            ,changeListInput = $('#changeListInput');
         option1.on('click', function(){ option2.removeAttr('checked'); $(this).attr('checked','checked'); setFocusOn(daysInput); });
         option2.on('click', function(){ option1.removeAttr('checked'); $(this).attr('checked','checked'); setFocusOn(eventsNumber); });
         daysInput.on('click', function(){ option2.removeAttr('checked'); option1.attr('checked','checked'); });
@@ -314,6 +542,17 @@ if('POST' == $rm)
                 $('#optionDW').val('1');
             }
             else { $('#optionDW').val('0') }
+
+            //#! build the access list
+            var a = [];
+            $('.tagName', $('#a-list')).each(function(){a.push($(this).text());});
+            accessListInput.val(JSON.stringify(a));
+
+            // build the change list
+            var b = [];
+            $('.tagName', $('#c-list')).each(function(){b.push($(this).text());});
+            changeListInput.val(JSON.stringify(b));
+
             return true;
         });
     });

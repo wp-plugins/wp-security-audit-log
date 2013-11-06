@@ -1,4 +1,4 @@
-<?php //if(! WPPH::canRun()){ return; } ?>
+<?php if(! WPPHUtil::canViewPage()){ return; } ?>
 <?php
 if(! WPPH::ready())
 {
@@ -21,19 +21,19 @@ if(! WPPH::ready())
             <div class="tablenav top" style="overflow: hidden; padding: 4px 0;">
                 <div class="alignleft">
                     <div style="overflow: hidden;">
-                        <input type="button" class="buttonRefreshEventsList button" value="<?php echo __('Refresh Events List',WPPH_PLUGIN_TEXT_DOMAIN);?>"
+                        <input type="button" class="buttonRefreshEventsList button" value="<?php echo __('Refresh Security Alerts List',WPPH_PLUGIN_TEXT_DOMAIN);?>"
                                style="float: left; display: block;" data-bind="disable: loading, click: cleanRefresh"/>
                         <span class="ajaxLoaderWrapper" style="float: left; display: block; width: 20px; height: 20px; padding: 7px 7px;"><img/></span>
                     </div>
                 </div>
                 <div class="alignleft actions" style="overflow: hidden;">
-                    <label class="alignleft" style="margin: 5px 5px 0 0;"><?php echo __('Number of events per page:',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
+                    <label class="alignleft" style="margin: 5px 5px 0 0;"><?php echo __('Number of security alerts per page:',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
                     <select name="actionLimit1" class="actionLimit" data-bind="options: availablePageSize, value: selectedPageSize"></select>
                     <input type="button" value="Apply" class="button action" data-bind="disable: loading, click: applyPageSize">
                 </div>
 
                 <div class="tablenav-pages">
-                    <span class="displaying-num" data-bind="text: totalEventsCount()+' events'"></span>
+                    <span class="displaying-num" data-bind="text: totalEventsCount()+' security alerts'"></span>
                     <span class="pagination-links"><a href="#" title="Go to the first page" class="first-page" data-bind="click: firstPage, css: {disabled: offset() <= 0}">«</a>
                     <a href="#" title="Go to the previous page" class="prev-page" data-bind="click: prevPage, disable: loading, click: prevPage, css: {disabled: offset() <= 0}">‹</a>
                     <span class="paging-input">
@@ -70,7 +70,7 @@ if(! WPPH::ready())
                 </tr>
             </tfoot>
             <tbody id="the-list">
-                <tr data-bind="if: events().length == 0"><td style="padding: 4px !important;" colspan="7"><?php echo __('No events',WPPH_PLUGIN_TEXT_DOMAIN);?></td></tr>
+                <tr data-bind="if: events().length == 0"><td style="padding: 4px !important;" colspan="7"><?php echo __('No security alerts',WPPH_PLUGIN_TEXT_DOMAIN);?></td></tr>
                 <!-- ko foreach: events -->
                 <tr data-bind="css: {'row-0': ($index() % 2) == 0, 'row-1': ($index() % 2) != 0}">
                     <td class="column-event_number"><span data-bind="text: eventNumber"></span></td>
@@ -88,18 +88,18 @@ if(! WPPH::ready())
             <div class="tablenav top" style="overflow: hidden; padding: 4px 0;">
                 <div class="alignleft">
                     <div style="overflow: hidden;">
-                        <input type="button" class="buttonRefreshEventsList button" value="<?php echo __('Refresh Events List',WPPH_PLUGIN_TEXT_DOMAIN);?>"
+                        <input type="button" class="buttonRefreshEventsList button" value="<?php echo __('Refresh security alerts List',WPPH_PLUGIN_TEXT_DOMAIN);?>"
                                style="float: left; display: block;" data-bind="disable: loading, click: cleanRefresh"/>
                         <span class="ajaxLoaderWrapper" style="float: left; display: block; width: 20px; height: 20px; padding: 7px 7px;"><img/></span>
                     </div>
                 </div>
                 <div class="alignleft actions" style="overflow: hidden;">
-                    <label class="alignleft" style="margin: 5px 5px 0 0;"><?php echo __('Number of events per page:',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
+                    <label class="alignleft" style="margin: 5px 5px 0 0;"><?php echo __('Number of security alerts per page:',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
                     <select name="actionLimit1" class="actionLimit" data-bind="options: availablePageSize, value: selectedPageSize"></select>
                     <input type="button" value="Apply" class="button action" data-bind="disable: loading, click: applyPageSize">
                 </div>
                 <div class="tablenav-pages">
-                    <span class="displaying-num" data-bind="text: totalEventsCount()+' events'"></span>
+                    <span class="displaying-num" data-bind="text: totalEventsCount()+' security alerts'"></span>
                     <span class="pagination-links"><a href="#" title="Go to the first page" class="first-page" data-bind="click: firstPage, css: {disabled: offset() <= 0}">«</a>
                     <a href="#" title="Go to the previous page" class="prev-page" data-bind="click: prevPage, disable: loading, click: prevPage, css: {disabled: offset() <= 0}">‹</a>
                     <span class="paging-input">
