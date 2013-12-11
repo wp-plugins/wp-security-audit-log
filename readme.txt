@@ -84,7 +84,7 @@ Yes it is possible to disable (and re-enable later) specific WordPress security 
 
 == Changelog ==
 
-=0.5.1 (2013-12-11) =
+= 0.5.1 (2013-12-11) =
 * Bug Fix
   * Fixed an issue with Edit Post function (in very specific cases) (http://wordpress.org/support/topic/was-working-great-no-post-edit-function-now)
     
