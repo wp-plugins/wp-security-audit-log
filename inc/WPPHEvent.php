@@ -1802,7 +1802,7 @@ class WPPHEventWatcher extends WPPHEvent
     }
 
     static function watchPostCategoriesChange($post, $wpdb, $postTitle, $event)
-    {
+    { return true;
         wpphLog(__METHOD__.'() triggered.');
 
         if(isset($GLOBALS['WPPH_POST_OLD_CATEGORIES']))

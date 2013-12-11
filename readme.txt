@@ -2,10 +2,10 @@
 Contributors: WPWhiteSecurity
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
-Tags: wordpress security plugin, wordpress security audit log, audit log, event log wordpress, wordpress user tracking, wordpress activity log, wordpress audit, security event log, audit trail, security audit trail, wordpress security alerts, wordpress monitor, wordpress security monitor
+Tags: wordpress security plugin, wordpress security audit log, audit log, event log wordpress, wordpress user tracking, wordpress activity log, wordpress audit, security event log, audit trail, security audit trail, wordpress security alerts, wordpress monitor, wordpress security monitor, wordpress admin, wordpress admin monitoring, wordpress security monitor, analytics, activity
 Requires at least: 3.0
 Tested up to: 3.7.1
-Stable tag: 0.5
+Stable tag: 0.5.1
 
 Identify WordPress security issues before they become a problem. Keep an audit log of everything that happens on WordPress including WordPress user activity.
 
@@ -54,6 +54,9 @@ For more information and to get started with WordPress Security, check out the f
 * [List of all WP Security Audit Log Alerts](http://www.wpwhitesecurity.com/wordpress-security-plugins/wp-security-audit-log/security-audit-alerts-logs/)
 * [Recipe for ultimate WordPress Security](http://www.wpwhitesecurity.com/wordpress-security/recipe-ultimate-diy-wordpress-security/)
 
+= Plugin Newsletter =
+To keep yourself updated with what is new and updated in our WordPress security plugins please subscribe to the [WP White Security Plugins Newsletter](http://eepurl.com/Jn9sP).
+
 == Installation ==
 
 1. Upload the `wordress-security-audit-log` folder to the `/wp-content/plugins/` directory
@@ -67,7 +70,7 @@ For more information and to get started with WordPress Security, check out the f
 By default the plugin will keep 5,000 events. When this limit is reached, older events are deleted to make place for the new ones. You can configure the plugin to keep more events from the settings page. You can also configure the plugin to delete events which are older than a number of days.
 
 = Is there a complete list of all WordPress security audit events? =
-Yes. A complete list can be found [here](http://www.wpwhitesecurity.com/wordpress-security-plugins/wp-security-audit-log/security-audit-event-logs/)
+Yes. A complete list can be found [here](http://www.wpwhitesecurity.com/wordpress-security-plugins/wp-security-audit-log/security-audit-alerts-logs/)
 
 = Can I disable some WordPress security alerts? =
 
@@ -81,7 +84,11 @@ Yes it is possible to disable (and re-enable later) specific WordPress security 
 
 == Changelog ==
 
-= 0.5 =
+=0.5.1 (2013-12-11) =
+* Bug Fix
+  * Fixed an issue with Edit Post function (in very specific cases) (http://wordpress.org/support/topic/was-working-great-no-post-edit-function-now)
+    
+= 0.5 (2013-11-06) =
 * New WordPress Security Alerts for monitoring of Widgets
   * Alert 2042: New widget was added
   * Alert 2043: A widget was modified
@@ -100,7 +107,7 @@ Yes it is possible to disable (and re-enable later) specific WordPress security 
   * Fixed issue where all users were able to see the Dashboard widgets with security alerts - now restricted only to users who have access to the plugin
   * Fixed user reported issue (http://wordpress.org/support/topic/errors-on-enabledisable-alerts-page)    
 
-= 0.4 =
+= 0.4 (2013-10-09) =
 * New WordPress Security Alerts for Custom Post Types
   * Alert 2029: New post with custom post type created and saved as draft
   * Alert 2030: Post with custom post type is publishes
@@ -126,7 +133,7 @@ Yes it is possible to disable (and re-enable later) specific WordPress security 
   * Improved the upgrade procedure of the plugin
   * Updated the Audit Log Viewer display to support more resultions such as those of tables and smartphones
 
-= 0.3 =
+= 0.3 (2019-09-19) =
 
 * New WordPress Security Alerts
   * Alert 6001: Anyone can Register option in WordPress settings was changed
@@ -146,7 +153,7 @@ Yes it is possible to disable (and re-enable later) specific WordPress security 
   * Fixed: Conflict with WP Mandrill and other plugins using pluggable.php
   * Fixed: Incorrect alerts generated when plugin is installed via a zip file / upload method
 
-= 0.2 =
+= 0.2 (2013-08-12) =
 
 * Restricted plugin options and WordPress Audit Log Event Viewer only to WordPress administrators
 * Improved failed logins events (events generated from the same IP, or same username will be grouped to avoid mass flooding of security events)
@@ -161,6 +168,6 @@ Yes it is possible to disable (and re-enable later) specific WordPress security 
 * Added new plugin alerts for when a plugin is installed, uninstalled or upgraded
 * Updated navigation menu to use standard WordPress dashboard icons etc
 
-= 0.1 =
+= 0.1 (2013-05-24) =
 
 * Initial beta release of WP Security Audit Log.
