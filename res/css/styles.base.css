@@ -9,6 +9,8 @@ h2.pageTitle-about { background: url("../img/page-about-logo.png") no-repeat lef
 #wpph-pageWrapper .button { margin-top: 1px;}
 #wpph-pageWrapper .buttonRefreshEventsList { margin-top: 3px;}
 
+.wpph-text-disabled { color: #c0c0c0 !important; }
+
 
 /*
 *  Page: Event Viewer
@@ -46,10 +48,11 @@ h2.pageTitle-about { background: url("../img/page-about-logo.png") no-repeat lef
 #section-holder p input[type="text"] { float: left; margin-left: 10px !important; }
 
 .form-table, .form-table td { border: none 0;}
-.form-table td { line-height: normal !important;; }
-.form-table td.section-left { width: 190px; padding: 0 30px 0 0; }
+.form-table td { line-height: normal !important; }
+.form-table td.section-left { width: 190px; padding: 0 0; }
+.form-table td.section-right { padding: 0 0 20px 0 !important; margin: 0 0 !important; }
 .form-table td.section-right p { padding: 0 0 !important; margin: 0 0 !important; }
-.form-table td #optionDW_off { margin-left: 10px; }
+.form-table td.section-left label { font-weight: bold; }
 
 #errMessage { margin: 20px 0; }
 #eventsDeletion #description,
@@ -60,11 +63,11 @@ h2.pageTitle-about { background: url("../img/page-about-logo.png") no-repeat lef
 }
 #optionsDescription #description { margin: 20px 0; }
 
-.widefat .item-cb { width: 50px !important; }
+.widefat .item-cb_h { width: 50px !important; }
 .widefat .item-event { width: 100px !important; text-align: left; padding: 8px 7px 2px 7px !important; }
-.widefat .item-type { width: 100px !important; text-align: left; padding: 8px 7px 2px 7px !important; }
+.widefat .item-type { min-width: 100px !important; text-align: left; padding: 8px 7px 2px 7px !important; }
 .widefat .item-description { width: auto !important; text-align: left; padding: 8px 7px 2px 7px !important; }
-
+.widefat tbody th.check-column { padding: 11px 0 0 3px !important; }
 /*
 *  Page: Events :: pagination
 */

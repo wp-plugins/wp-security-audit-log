@@ -24,8 +24,8 @@ $showDW = (empty($opt->showDW) ? false : true);
 // active delete option for events
 if(!empty($opt->daysToKeep)){ $daysInput = $opt->daysToKeep; $activeOption = 1; }
 if(! empty($opt->eventsToKeep)){ $eventsNumber = $opt->eventsToKeep; $activeOption = 2; }
-$allowedAccess = get_option(WPPH_PLUGIN_ALLOW_ACCESS_OPTION_NAME, array());
-$allowedChange = get_option(WPPH_PLUGIN_ALLOW_CHANGE_OPTION_NAME, array());
+$allowedAccess = WPPHNetwork::getGlobalOption(WPPH_PLUGIN_ALLOW_ACCESS_OPTION_NAME, true, true, array());
+$allowedChange = WPPHNetwork::getGlobalOption(WPPH_PLUGIN_ALLOW_CHANGE_OPTION_NAME, true, true, array());
 if(! isset($activeOption)){ $activeOption = 2; }
 // end defaults
 
@@ -47,23 +47,45 @@ if('POST' == $rm)
     $deleteEventsBy = intval($_POST['deleteEventsBy']);
     $deleteEventsValue = intval($_POST['deleteEventsValue']);
 
+    $pac = (isset($_POST['accessListInput']) ? trim($_POST['accessListInput']) : null);
+    $pcc = (isset($_POST['changeListInput']) ? trim($_POST['changeListInput']) : null);
+
     // pre-validate access rules if any
-    if(! empty($_POST['accessListInput'])){
-        $set = $_POST['accessListInput'];
-        $set = str_replace('\\','', $set);
-        $set = json_decode($set);
-        $allowedAccess = $set;
-        // Allowed Access
-        WPPHUtil::saveAllowAccessUserList($allowedAccess);
+    if(! empty($pac) && strlen($pac)>4){
+        $pac = str_replace('\\','', $pac);
+        $allowedAccess = json_decode($pac);
+        if(is_null($allowedAccess)){
+            wpphLog('Error decoding json input $pac.', array('pac'=>$pac));
+            $validationMessage['error'] = __('UAL: Error decoding json input', WPPH_PLUGIN_TEXT_DOMAIN);
+            $hasErrors = true;
+        }
+        else {
+            wpphLog('accessListInput is not empty.', array('pac'=>$pac,'data'=>$allowedAccess));
+            WPPHUtil::saveAllowAccessUserList($allowedAccess);
+        }
     }
+    else {
+        wpphLog('accessListInput is empty. Resetting the user access list.');
+        WPPHUtil::saveAllowAccessUserList(array());
+    }
+
     // pre-validate change rules if any
-    if(! empty($_POST['changeListInput'])){
-        $set = $_POST['changeListInput'];
-        $set = str_replace('\\','', $set);
-        $set = json_decode($set);
-        $allowedChange = $set;
-        // Allowed Change
-        WPPHUtil::saveAllowedChangeUserList($allowedChange);
+    if(! empty($pcc) && strlen($pcc)>4){
+        $pcc = str_replace('\\','', $pcc);
+        $allowedChange = json_decode($pcc);
+        if(is_null($allowedChange)){
+            wpphLog('Error decoding json input $pcc.', array('pcc'=>$pcc));
+            $validationMessage['error'] = __('UCL: Error decoding json input: '.$pcc.' '.var_export($allowedChange,true), WPPH_PLUGIN_TEXT_DOMAIN);
+            $hasErrors = true;
+        }
+        else {
+            wpphLog('changeListInput is not empty.', array('pcc'=>$pcc,'data'=>$allowedChange));
+            WPPHUtil::saveAllowedChangeUserList($allowedChange);
+        }
+    }
+    else {
+        wpphLog('changeListInput is empty. Resetting the user access list.');
+        WPPHUtil::saveAllowedChangeUserList(array());
     }
 
     // if Delete events older than ... days
@@ -148,7 +170,8 @@ if('POST' == $rm)
     .the-list td.column-username p,
     .the-list td.column-name p,
     .the-list td.column-role p { padding-left: 7px !important;}
-
+    .form-table td { vertical-align: top !important; }
+    .section-left label { margin-top: 3px !important; display: block;}
 </style>
 <div id="wpph-pageWrapper" class="wrap">
     <h2 class="pageTitle pageTitle-settings"><?php echo __('WP Security Audit Log Settings',WPPH_PLUGIN_TEXT_DOMAIN);?></h2>
@@ -170,8 +193,8 @@ if('POST' == $rm)
                     <table cellspacing="0" cellpadding="0" class="form-table">
                         <tbody>
                             <tr valign="top">
-                                <td rowspan="4" class="section-left">
-                                    <label style="display:block;margin: 30px 0 0 0;" for="eventsNumberInput"><?php echo __('Security Alerts Pruning',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
+                                <td rowspan="3" class="section-left">
+                                    <label style="display:block;margin: 0 0;" for="eventsNumberInput"><?php echo __('Security Alerts Pruning',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
                                 </td>
                             </tr>
                             <tr>
@@ -195,21 +218,21 @@ if('POST' == $rm)
                                         <input type="text" id="eventsNumberInput" maxlength="6"
                                                placeholder="<?php echo $wpph_t1;?>"
                                                value="<?php if(! empty($eventsNumber)) { echo $eventsNumber; } ;?>"/>
-                                        <span> <?php echo $wpph_t1;?></span>
+                                        <span><?php echo $wpph_t1;?></span>
                                     </p>
+                                    <p class="description" style="margin-top: 5px !important;"><?php echo sprintf(__('By default %s will keep up to %d WordPress Security Events.',WPPH_PLUGIN_TEXT_DOMAIN),WPPH_PLUGIN_NAME, WPPH_KEEP_MAX_EVENTS);?></p>
                                 </td>
                             </tr>
                             <tr>
-                                <td class="section-right"><p class="description"><?php echo sprintf(__('By default %s will keep up to %d WordPress Security Events.',WPPH_PLUGIN_TEXT_DOMAIN),WPPH_PLUGIN_NAME, WPPH_KEEP_MAX_EVENTS);?></p></td>
-                            </tr>
-                            <tr><td style="height: 10px;"></td></tr>
-                            <tr>
-                                <td rowspan="2" class="section-left" style=""><label style="display:block;margin: 0 0 0;" for="optionDW_on"><?php echo __('Security Alerts Dashboard Widget',WPPH_PLUGIN_TEXT_DOMAIN);?></label></td>
+                                <td rowspan="2" class="section-left" style=""><label style="display:block;margin: 0 0;" for="optionDW_on"><?php echo __('Alerts Dashboard Widget',WPPH_PLUGIN_TEXT_DOMAIN);?></label></td>
                             </tr>
                             <tr>
                                 <td class="section-right">
                                     <input type="radio" id="optionDW_on" class="radioInput" style="margin-top: 2px;"/><label for="optionDW_on" style="padding-top: 5px; padding-left: 3px;"><?php echo __('On',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
+                                    <br/>
                                     <input type="radio" id="optionDW_off" class="radioInput" style="margin-top: 2px;"/><label for="optionDW_off" style="padding-top: 5px; padding-left: 3px;"><?php echo __('Off',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
+                                    <br/>
+                                    <p class="description" style="margin-top: 5px !important;"><?php echo sprintf(__('Display a dashboard widget with the latest 5 security alerts',WPPH_PLUGIN_TEXT_DOMAIN),WPPH_PLUGIN_NAME, WPPH_KEEP_MAX_EVENTS);?></p>
                                 </td>
                             </tr>
                         </tbody>
@@ -222,11 +245,11 @@ if('POST' == $rm)
                         .tagElement .tagDelete:hover { color: #d00000; }
                         #section-holder #c-list p.description { margin-top: 0 !important; margin-bottom: 0 !important; }
                     </style>
-                    <table cellspacing="0" cellpadding="0" class="form-table" style="margin-top: 30px;">
+                    <table cellspacing="0" cellpadding="0" class="form-table">
                         <tbody>
                             <tr valign="top">
                                 <td valign="top" class="section-left">
-                                    <label style="display:block;margin: 12px 0 0 0;" for="inputUser1"><?php echo __('Can view Security Alerts',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
+                                    <label style="display:block;margin: 0 0;" for="inputUser1"><?php echo __('Can view Security Alerts',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
                                 </td>
                                 <td class="section-right">
                                     <div id="a-list">
@@ -237,11 +260,9 @@ if('POST' == $rm)
                                     </div>
                                 </td>
                             </tr>
-                                <tr><td></td><td></td></tr>
-                                <tr><td></td><td></td></tr>
-                            <tr valign="top">
+                            <tr valign="top" style="margin-top: 30px;">
                                 <td valign="top" class="section-left">
-                                    <label style="display:block;margin: 12px 0 0 0;" for="inputUser2"><?php echo __('Can Manage Plugin ',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
+                                    <label style="display:block;margin: 0 0;" for="inputUser2"><?php echo __('Can Manage Plugin ',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
                                 </td>
                                 <td class="section-right">
                                     <div id="c-list">
@@ -262,7 +283,6 @@ if('POST' == $rm)
                                 inputAdd1 = $('#inputAdd1'),
                                 divTarget1 = $('#accessListTarget'),
                                 tagElement1 = $('.tagElement', mainContainer1),
-
                                 mainContainer2 = $('#c-list'),
                                 inputUser2 = $('#inputUser2'),
                                 inputAdd2 = $('#inputAdd2'),
@@ -393,10 +413,7 @@ if('POST' == $rm)
                             });
                         });
                     </script>
-
                 </div>
-
-
             </div>
             <p style="margin-top: 40px;">
                 <input type="submit" id="submitButton" class="button button-primary" value="<?php echo __('Save settings',WPPH_PLUGIN_TEXT_DOMAIN);?>"/>

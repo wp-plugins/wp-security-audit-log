@@ -61,7 +61,7 @@ if('POST' == $rm)
                 }
             }
         }
-        update_option(WPPH_PLUGIN_EVENTS_LIST_OPTION_NAME, $logEvents);
+        wpph_updatePluginEventsList($logEvents);
         $validationMessage['success'] = __('Your settings have been saved.',WPPH_PLUGIN_TEXT_DOMAIN);
     }
 }
@@ -101,19 +101,32 @@ if('POST' == $rm)
                     echo '<div id="'.$sectionName.'">';
                     echo '<table class="wp-list-table widefat" cellspacing="0" cellpadding="0">';
                     echo '<thead>';
-                        echo '<th class="manage-column column-cb check-column item-cb" scope="col"><input type="checkbox" class="js-select-all"/></th>';
-                        echo '<th class="manage-column column-cb check-column item-event" scope="col">'.__('Event',WPPH_PLUGIN_TEXT_DOMAIN).'</th>';
-                        echo '<th class="manage-column column-cb check-column item-type" scope="col">'.__('Type',WPPH_PLUGIN_TEXT_DOMAIN).'</th>';
-                        echo '<th class="manage-column column-cb check-column item-description" scope="col">'.__('Description',WPPH_PLUGIN_TEXT_DOMAIN).'</th>';
+                        echo '<th class="manage-column column-cb check-column item-cb item-cb_h" scope="col"><input type="checkbox" class="js-select-all"/></th>';
+                        echo '<th class="manage-column item-event" scope="col">'.__('Event',WPPH_PLUGIN_TEXT_DOMAIN).'</th>';
+                        echo '<th class="manage-column item-type" scope="col">'.__('Type',WPPH_PLUGIN_TEXT_DOMAIN).'</th>';
+                        echo '<th class="manage-column item-description" scope="col">'.__('Description',WPPH_PLUGIN_TEXT_DOMAIN).'</th>';
                     echo '</thead>';
                     echo '<tbody>';
+                    $disabledEvents = array(6001,6002);
                     foreach($items as $item => $enabled){
-                        echo '<tr class="row">';
-                            echo '<th class="manage-column column-cb check-column" scope="row"><input class="item_cb" type="checkbox" '.($enabled ? 'checked="checked"' : '').' value="'.$item.'"/></th>';
+                        if(in_array((int)$item, $disabledEvents)){
+                            $t = sprintf(__('Event %s is not available in MultiSite.',WPPH_PLUGIN_TEXT_DOMAIN), $item);
+                            echo '<tr class="row" title="'.$t.'">';
+                            echo '<th class="manage-column column-cb check-column item-cb_h" scope="row"><input class="item_cb" type="checkbox" disabled="disabled"/></th>';
+                            echo '<td class="wpph-text-disabled">'.$item.'</td>';
+                            echo '<td class="wpph-text-disabled">'.(isset($defaultEvents[$sectionName][$item]['type']) ? $defaultEvents[$sectionName][$item]['type'] : '').'</td>';
+                            echo '<td class="wpph-text-disabled">'.(isset($defaultEvents[$sectionName][$item]['text']) ? $defaultEvents[$sectionName][$item]['text'] : '').'</td>';
+                            echo '</tr>';
+                        }
+                        else {
+                            echo '<tr class="row">';
+                            echo '<th class="manage-column column-cb check-column item-cb_h" scope="row"><input class="item_cb" type="checkbox" '.($enabled ? 'checked="checked"' : '').' value="'.$item.'"/></th>';
                             echo '<td>'.$item.'</td>';
                             echo '<td>'.(isset($defaultEvents[$sectionName][$item]['type']) ? $defaultEvents[$sectionName][$item]['type'] : '').'</td>';
                             echo '<td>'.(isset($defaultEvents[$sectionName][$item]['text']) ? $defaultEvents[$sectionName][$item]['text'] : '').'</td>';
-                        echo '</tr>';
+                            echo '</tr>';
+
+                        }
                     }
                     echo '</tbody>';
                     echo '</table>';

@@ -16,6 +16,11 @@ class WPPH
      */
     static $baseMenuSlug = WPPH_PLUGIN_PREFIX;
 
+    static function loadTextDomain()
+    {
+        load_plugin_textdomain(WPPH_PLUGIN_TEXT_DOMAIN, false, WPPH_PLUGIN_DIR.'languages/');
+    }
+
     /**
      * @since v0.5
      * Retrieve the list of all events to display in the enable/disable alerts page
@@ -93,6 +98,9 @@ class WPPH
                 2044 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('User deleted a widget',WPPH_PLUGIN_TEXT_DOMAIN)),
                 2045 => array('type' => WPPH_E_NOTICE_TEXT, 'text' => __('User moved a widget',WPPH_PLUGIN_TEXT_DOMAIN)),
             ),
+            'Themes' => array(
+                3000 => array('type' => WPPH_E_NOTICE_TEXT, 'text' => __('User activated a theme.',WPPH_PLUGIN_TEXT_DOMAIN)),
+            ),
             'Plugins' => array(
                 5000 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('User installed a plugin',WPPH_PLUGIN_TEXT_DOMAIN)),
                 5001 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('User activated a WordPress plugin',WPPH_PLUGIN_TEXT_DOMAIN)),
@@ -105,6 +113,19 @@ class WPPH
                 6001 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('Option Anyone Can Register in WordPress settings changed',WPPH_PLUGIN_TEXT_DOMAIN)),
                 6002 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('New User Default Role changed',WPPH_PLUGIN_TEXT_DOMAIN)),
                 6003 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('WordPress Administrator Notification email changed',WPPH_PLUGIN_TEXT_DOMAIN))
+            ),
+            'MultiSite' => array(
+                4008 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('Granted Super Admin privileges to user',WPPH_PLUGIN_TEXT_DOMAIN)),
+                4009 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('Revoked Super Admin privileges from user',WPPH_PLUGIN_TEXT_DOMAIN)),
+                4010 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('Existent user added to site',WPPH_PLUGIN_TEXT_DOMAIN)),
+                4011 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('User removed from site',WPPH_PLUGIN_TEXT_DOMAIN)),
+                4012 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('New network user created',WPPH_PLUGIN_TEXT_DOMAIN)),
+                7000 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('Site added to network',WPPH_PLUGIN_TEXT_DOMAIN)),
+                7001 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('Site archived',WPPH_PLUGIN_TEXT_DOMAIN)),
+                7002 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('Site unarchived',WPPH_PLUGIN_TEXT_DOMAIN)),
+                7003 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('Site activated',WPPH_PLUGIN_TEXT_DOMAIN)),
+                7004 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('Site deactivated',WPPH_PLUGIN_TEXT_DOMAIN)),
+                7005 => array('type' => WPPH_E_HIGH_TEXT, 'text' => __('Site deleted',WPPH_PLUGIN_TEXT_DOMAIN)),
             ),
         );
     }
@@ -121,17 +142,15 @@ class WPPH
         if(self::canLoad())
         {
             wp_enqueue_style('wpph_styles_base', WPPH_PLUGIN_URL . 'res/css/styles.base.css');
-            wp_enqueue_script('wpph-ko-js', WPPH_PLUGIN_URL . 'res/js/knockout.js' );
-            wp_enqueue_script('wpph-alvm-js', WPPH_PLUGIN_URL . 'res/js/audit-view-model.js' );
-            wp_enqueue_script('wpph-jcookie-js', WPPH_PLUGIN_URL . 'res/js/jquery-ck.js' );
+            wp_enqueue_script('wpph-alvm-js', WPPH_PLUGIN_URL . 'res/js/audit-view-model.js', array('wpph-jcookie-js', 'wpph-ko-js'));
+            wp_enqueue_script('wpph-ko-js', WPPH_PLUGIN_URL . 'res/js/knockout.js', array('jquery'));
+            wp_enqueue_script('wpph-jcookie-js', WPPH_PLUGIN_URL . 'res/js/jquery-ck.js', array('jquery'));
         }
     }
 
     public static function createPluginWpSidebar()
     {
         $reqCap = self::$requiredCapMenu;
-        $user = wp_get_current_user();
-        $userId = $user->ID;
 
         if (!function_exists('add_menu_page'))
         {
@@ -139,7 +158,7 @@ class WPPH
             return;
         }
 
-        if(WPPHUtil::isAdministrator($userId)){
+        if(WPPHUtil::isAdministrator(wp_get_current_user()->ID)){
             self::_createMenu($reqCap, true, true, true);
         }
         elseif (WPPHUtil::isAllowedChange()){
@@ -155,14 +174,26 @@ class WPPH
         if($isAdministrator || $allowedChange){
             add_menu_page('WP Security Audit Log', 'WP Security Audit Log', $reqCap, self::$baseMenuSlug, 'WPPH::pageMain', WPPH_PLUGIN_URL.'res/img/logo-main-menu.png');
             add_submenu_page(self::$baseMenuSlug, 'Audit Log Viewer', 'Audit Log Viewer', $reqCap, self::$baseMenuSlug, 'WPPH::pageMain');
-            add_submenu_page(self::$baseMenuSlug, __('Settings',WPPH_PLUGIN_TEXT_DOMAIN), __('Settings',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, self::$baseMenuSlug.'settings', 'WPPH::pageSettings');
-            add_submenu_page(self::$baseMenuSlug, __('Enable/Disable Alerts',WPPH_PLUGIN_TEXT_DOMAIN), __('Enable/Disable Alerts',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, self::$baseMenuSlug.'alerts', 'WPPH::pageAlerts');
+            if(WPPHUtil::isMainSite()){
+                add_submenu_page(self::$baseMenuSlug, __('Settings',WPPH_PLUGIN_TEXT_DOMAIN), __('Settings',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, self::$baseMenuSlug.'settings', 'WPPH::pageSettings');
+                add_submenu_page(self::$baseMenuSlug, __('Enable/Disable Alerts',WPPH_PLUGIN_TEXT_DOMAIN), __('Enable/Disable Alerts',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, self::$baseMenuSlug.'alerts', 'WPPH::pageAlerts');
+            }
+            else {
+                if(WPPHUtil::isAllowedChange()){
+                    add_submenu_page(self::$baseMenuSlug, __('Settings',WPPH_PLUGIN_TEXT_DOMAIN), __('Settings',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, self::$baseMenuSlug.'settings', 'WPPH::pageSettings');
+                    add_submenu_page(self::$baseMenuSlug, __('Enable/Disable Alerts',WPPH_PLUGIN_TEXT_DOMAIN), __('Enable/Disable Alerts',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, self::$baseMenuSlug.'alerts', 'WPPH::pageAlerts');
+                }
+            }
             add_submenu_page(self::$baseMenuSlug, __('About',WPPH_PLUGIN_TEXT_DOMAIN), __('About',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, self::$baseMenuSlug.'about', 'WPPH::pageAbout');
             add_submenu_page(self::$baseMenuSlug, __('Support',WPPH_PLUGIN_TEXT_DOMAIN), __('Support',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, self::$baseMenuSlug.'support', 'WPPH::pageSupport');
         }
         elseif($allowedAccess){
             add_menu_page('WP Security Audit Log', 'WP Security Audit Log', $reqCap, self::$baseMenuSlug, 'WPPH::pageMain', WPPH_PLUGIN_URL.'res/img/logo-main-menu.png');
             add_submenu_page(self::$baseMenuSlug, 'Audit Log Viewer', 'Audit Log Viewer', $reqCap, self::$baseMenuSlug, 'WPPH::pageMain');
+            if(WPPHUtil::isAllowedChange()){
+                add_submenu_page(self::$baseMenuSlug, __('Settings',WPPH_PLUGIN_TEXT_DOMAIN), __('Settings',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, self::$baseMenuSlug.'settings', 'WPPH::pageSettings');
+                add_submenu_page(self::$baseMenuSlug, __('Enable/Disable Alerts',WPPH_PLUGIN_TEXT_DOMAIN), __('Enable/Disable Alerts',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, self::$baseMenuSlug.'alerts', 'WPPH::pageAlerts');
+            }
             add_submenu_page(self::$baseMenuSlug, __('About',WPPH_PLUGIN_TEXT_DOMAIN), __('About',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, self::$baseMenuSlug.'about', 'WPPH::pageAbout');
             add_submenu_page(self::$baseMenuSlug, __('Support',WPPH_PLUGIN_TEXT_DOMAIN), __('Support',WPPH_PLUGIN_TEXT_DOMAIN), $reqCap, self::$baseMenuSlug.'support', 'WPPH::pageSupport');
         }
@@ -199,7 +230,7 @@ class WPPH
                 }
             }
         }
-        update_option(WPPH_PLUGIN_EVENTS_LIST_OPTION_NAME, $alerts);
+        wpph_updatePluginEventsList($alerts);
         return $alerts;
     }
 
@@ -209,7 +240,7 @@ class WPPH
      * @return array
      */
     static function getEvents(){
-        $events = get_option(WPPH_PLUGIN_EVENTS_LIST_OPTION_NAME);
+        $events = wpph_getPluginEventsList();
         if(false === $events){
             $events = self::createDefaultEventsList();
         }
@@ -225,6 +256,7 @@ class WPPH
             $settings->lastCleanup = time();
             $settings->cleanupRan = 0;
             $settings->showDW = 1; // whether or not to show the dashboard widget. @since v0.4
+
         update_option(WPPH_PLUGIN_SETTING_NAME, $settings);
         self::createDefaultEventsList();
         wpphLog('Settings added.');
@@ -233,14 +265,14 @@ class WPPH
     public static function getPluginSettings()
     {
         $settings = get_option(WPPH_PLUGIN_SETTING_NAME);
-        if(false === $settings){
+        if(false == $settings){
             $settings = self::createPluginDefaultSettings();
         }
         return $settings;
     }
 
     /**
-     * @param object $settings If this param is null, $settingName & $settingValue must be set
+     * @param object $settings If this param is null, $settingName & $settingValue(this cannot be null) must be set
      * @param string $settingName Optional. Required if $settings is null
      * @param string $settingValue Optional. Required if $settings is null
      * @param bool $overrideCleanupRan Whether or not to override the cleanupRan option. Defaults to false
@@ -271,8 +303,12 @@ class WPPH
         wpphLog('Settings saved.', $settings);
     }
 
-    public static function onPluginActivate()
+    public static function onPluginActivate($blogId=1)
     {
+        if($blogId > 1){
+            return true;
+        }
+
         wpphLog(__METHOD__.'() triggered.');
 
         $canContinue = true;
@@ -323,7 +359,6 @@ class WPPH
                 self::__addPluginError(__("Plugin could not be properly installed because we have encountered errors during the database update.",WPPH_PLUGIN_TEXT_DOMAIN));
                 return false;
             }
-
         }
         // plugin already installed
         else
@@ -378,16 +413,21 @@ class WPPH
     }
 
     /**
-     * triggered when the plugin is deactivated
+     * Triggered when the plugin is deactivated
+     * @param int $blogId
+     * @return bool true
      */
-    public static function onPluginDeactivate()
+    public static function onPluginDeactivate($blogId=1)
     {
+        wpphLog(__FUNCTION__.'() triggered.');
         wp_clear_scheduled_hook(WPPH_PLUGIN_DEL_EVENTS_CRON_TASK_NAME);
         delete_option(WPPH_PLUGIN_ERROR_OPTION_NAME);
-        wpphLog('__FUNCTION__.() triggered.');
+        update_option('WPPH_PLUGIN_ACTIVATED',0);
+        return true;
     }
 
-    public static function __addPluginError($error){
+    public static function __addPluginError($error)
+    {
         $data = get_option(WPPH_PLUGIN_ERROR_OPTION_NAME);
         if(empty($data)){
             $data = array();
@@ -408,13 +448,26 @@ class WPPH
         WPPHUtil::saveInitialAccessChangeList();
         if($triggerInstallEvent)
         {
-            define('WPPH_PLUGIN_INSTALLED_OK',true); //@see: WPPHEventWatcher::watchPluginInstall()
+            if(! defined('WPPH_PLUGIN_INSTALLED_OK')) {
+                //@see: WPPHEventWatcher::watchPluginInstall()
+                define('WPPH_PLUGIN_INSTALLED_OK',true);
+            }
             // log plugin installation
-            WPPHEvent::_addLogEvent(5000,wp_get_current_user()->ID, WPPHUtil::getIP(), array(WPPH_PLUGIN_NAME));
-            wpphLog('Plugin installed.', array('plugin'=>WPPH_PLUGIN_NAME));
+            wpph_installPlugin(WPPH_PLUGIN_NAME, wp_get_current_user()->ID, WPPHUtil::getIP());
         }
         // log plugin activation
         WPPHEvent::hookWatchPluginActivity();
+
+        // register cron job for events deletion
+        if(defined('DISABLE_WP_CRON') && DISABLE_WP_CRON){ return true; }
+        else
+        {
+            if ( ! wp_next_scheduled(WPPH_PLUGIN_DEL_EVENTS_CRON_TASK_NAME)) {
+                $interval = (defined('WPPH_CLEANUP_INTERVAL') ? WPPH_CLEANUP_INTERVAL : 'hourly');
+                wp_schedule_event( time(), $interval, WPPH_PLUGIN_DEL_EVENTS_CRON_TASK_NAME );
+                wpphLog(__METHOD__.'() '.WPPH_PLUGIN_DEL_EVENTS_CRON_TASK_NAME.' task scheduled by wp-cron. Time Interval set to: '.$interval);
+            }
+        }
     }
     /**
      * @internal
@@ -446,6 +499,15 @@ class WPPH
         return true;
     }
     public static function checkPHP(){ return (version_compare(phpversion(), '5.0.0', '>=')); }
+
+
+    /**
+     * Check to see whether or not this is a multisite instance
+     * @since v0.6
+     * @return bool
+     */
+    static function isMultisite(){ return ((function_exists('is_multisite') && is_multisite()) ? true : false); }
+
 }
 
 

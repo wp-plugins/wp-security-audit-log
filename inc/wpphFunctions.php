@@ -33,15 +33,16 @@ function wpph_isEventEnabled($event, array $events = array())
 {
     if(empty($event)){ return false; }
     if(empty($events)){
-        $events = get_option(WPPH_PLUGIN_EVENTS_LIST_OPTION_NAME, array());
+        $events = wpph_getPluginEventsList();
         if(empty($events)){
-            wpphLog("Error retrieving the list of events from database. option: WPPH_PLUGIN_EVENTS_LIST_OPTION_NAME was either not found or empty.");
+            wpphLog("Error retrieving the list of events from database. option: ".WPPH_PLUGIN_EVENTS_LIST_OPTION_NAME." was either not found or empty.");
             return false;
         }
     }
-    foreach($events as $k=>$entries){
-        foreach($entries as $_event => $enabled){
-            if(($event == $_event) && $enabled){
+    $event = (int)$event;
+    foreach($events as $sections){
+        foreach($sections as $_event => $enabled){
+            if(($event == (int)$_event) && (bool)$enabled){
                 return true;
             }
         }
@@ -55,3 +56,37 @@ function wpphCustomLinks($links) { return array_merge(array('<a href="admin.php?
 function wpphLoadTextDomain() { load_plugin_textdomain(WPPH_PLUGIN_TEXT_DOMAIN, false, 'wp-security-audit-log/languages/'); }
 
 
+/**
+ * @internal
+ * @param string $pluginName
+ * @param int $userID
+ * @param string $userIP
+ */
+function wpph_installPlugin($pluginName, $userID, $userIP)
+{
+    if(! empty($_GET['plugin']))
+    {
+        WPPHEvent::_addLogEvent(5000,$userID, $userIP, array($pluginName));
+        wpphLog('Plugin installed.', array('plugin'=>$pluginName));
+    }
+}
+
+function wpph_updatePluginEventsList($data)
+{
+    if(WPPH::isMultisite()){
+        update_blog_option((int)get_option(WPPH_MAIN_SITE_ID_OPTION_NAME), WPPH_PLUGIN_EVENTS_LIST_OPTION_NAME, $data);
+    }
+    else { update_option(WPPH_PLUGIN_EVENTS_LIST_OPTION_NAME, $data); }
+}
+
+function wpph_getPluginEventsList()
+{
+    return WPPHNetwork::getGlobalOption(WPPH_PLUGIN_EVENTS_LIST_OPTION_NAME, true, true);
+}
+
+function wpph_formatJsonOutput(array $sourceData=array(), $error=''){
+    return json_encode(array(
+        'dataSource' => $sourceData,
+        'error' => $error
+    ));
+};

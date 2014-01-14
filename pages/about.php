@@ -4,7 +4,7 @@
     {
         $errors = WPPH::getPluginErrors();
         foreach($errors as $error) {
-            wpph_adminNotice($error);
+            wpph_adminNotice(base64_decode($error));
         }
         echo '<div id="wpph-pageWrapper" class="wrap">';
         echo '<p>'.__('We have encountered some errors during the installation of the plugin which you can find above.',WPPH_PLUGIN_TEXT_DOMAIN).'</p>';

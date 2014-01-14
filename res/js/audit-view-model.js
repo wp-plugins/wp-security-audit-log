@@ -1,216 +1,314 @@
-var AuditLogViewModel = (function($) {
+var AuditLogViewModel = (function($, ko) {
+    "use strict";
+    /*global AjaxLoaderShow, AjaxLoaderHide, ajaxurl, __ajaxLoaderTargetElement__*/
+    /*jshint curly:false,devel:true*/
 
-    function loadRemoteData(viewModel, offset) {
-        var data = {
-            'action': 'wpph_get_events',
-
-            'orderBy': viewModel.orderBy(),
-            'sort': viewModel.orderByDescending() ? 'desc' : 'asc',
-
-            'offset': offset,
-            'count': viewModel.pageSize()
-        };
-
-        AjaxLoaderShow(__ajaxLoaderTargetElement__);
-
-        $.ajax({
-            url: ajaxurl,
-            cache: false,
-            type: 'POST',
-            data: data,
-            beforeSend: function() {
-                viewModel.loading(true)
-            },
-            success: function(response) {
-                viewModel.loading(false);
-                var json = $.parseJSON(response);
-
-                if (json.error.length > 0) {
-                    AjaxLoaderHide(__ajaxLoaderTargetElement__);
-                    return;
+    var error = ko.observable('');
+    var loading = ko.observable(false);
+    var events = ko.observableArray([]);
+    var totalEventsCount = ko.observable(0);
+    var offset = ko.observable(0);
+    var availablePageSize = ko.observableArray([25, 50, 100]);
+    var isMainSite = ko.observable(false);
+    var _blogId = ko.observable();
+    var blogId = ko.computed({
+        read: function() {
+            var parsedValue = parseInt(_blogId(), 10);
+            return isNaN(parsedValue) ? undefined : parsedValue;
+        },
+        write: function(newValue) {
+            newValue = parseInt(newValue, 10);
+            if (isNaN(newValue)) newValue = undefined;
+            if (_blogId() !== newValue) {
+   //             console.warn('blogId changed from %o to %o', _blogId(), newValue);
+                var refresh = false;
+                if (_blogId() !== undefined) {
+                    refresh = true;
                 }
-
-                AjaxLoaderHide(__ajaxLoaderTargetElement__);
-
-                viewModel.events(json.dataSource.events);
-                viewModel.totalEventsCount(json.dataSource.eventsCount);
-                viewModel.offset(offset);
-
-                if (viewModel.totalEventsCount() < viewModel.offset()) {
-                    viewModel.offset(0);
+                _blogId(newValue);
+                if (refresh) {
+                    refreshEvents(0, newValue);
                 }
-
-                if (viewModel.offset() == 0)
-                    viewModel.currentPage(1);
-                else
-                    viewModel.currentPage(1 + viewModel.offset() / viewModel.pageSize());
-
-            },
-            error: function() {
-                viewModel.loading(false);
             }
-        });
-    }
-
-    function AuditLogViewModel()
-    {
-        this.columns = ko.observableArray([
-            {columnHeader: 'Event', columnName: 'EventNumber', sortable: true, columnWidth: '5%', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
-            {columnHeader: 'ID', columnName: 'EventID', sortable: true, columnWidth: '5%', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
-            {columnHeader: 'Date', columnName: 'EventDate', sortable: true, columnWidth: '11%', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
-            {columnHeader: 'Type', columnName: 'EventType', sortable: true, columnWidth: '6%', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
-            {columnHeader: 'IP Address', columnName: 'UserIP', sortable: true, columnWidth: '9%', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
-            {columnHeader: 'User', columnName: 'UserID', sortable: true, columnWidth: '10%', sorted: ko.observable(false), sortedDescending: ko.observable(false)},
-            {columnHeader: 'Description', columnName: 'EventDescription', sortable: false, columnWidth: 'auto', sorted: ko.observable(false), sortedDescending: ko.observable(false)}]);
-
-        this.loading = ko.observable(false);
-        this.events = ko.observableArray([]);
-        this.totalEventsCount = ko.observable(0);
-        this.offset = ko.observable(0);
-        this.availablePageSize = ko.observableArray([25, 50, 100]);
-
-        var _initialPageSize = parseInt($.cookie('wpph_ck_page_size'));
-        if (this.availablePageSize.indexOf(_initialPageSize) < 0) {
-            _initialPageSize = this.availablePageSize()[1];
         }
+    });
+    var blogList = ko.observableArray();
 
-        this.pageSize = ko.observable(_initialPageSize);
-        this.selectedPageSize = ko.observable(_initialPageSize);
-        this.pageCount = ko.computed(function() {
-            return Math.ceil(this.totalEventsCount() / this.pageSize());
-        }, this);
+    var columns = ko.observableArray([
+        {columnHeader: 'Event', columnName: 'EventNumber', sortable: true, columnWidth: '5%', sorted: ko.observable(false), sortedDescending: ko.observable(false), visible: true },
+        {columnHeader: 'ID', columnName: 'EventID', sortable: true, columnWidth: '5%', sorted: ko.observable(false), sortedDescending: ko.observable(false), visible: true},
+        {columnHeader: 'Date', columnName: 'EventDate', sortable: true, columnWidth: '11%', sorted: ko.observable(false), sortedDescending: ko.observable(false), visible: true},
+        {columnHeader: 'Type', columnName: 'EventType', sortable: true, columnWidth: '6%', sorted: ko.observable(false), sortedDescending: ko.observable(false), visible: true},
+        {columnHeader: 'IP Address', columnName: 'UserIP', sortable: true, columnWidth: '9%', sorted: ko.observable(false), sortedDescending: ko.observable(false), visible: true},
+        {columnHeader: 'User', columnName: 'UserID', sortable: true, columnWidth: '10%', sorted: ko.observable(false), sortedDescending: ko.observable(false), visible: true},
+        {columnHeader: 'Site', columnName: 'SiteName', sortable: true, columnWidth: '10%', sorted: ko.observable(true), sortedDescending: ko.observable(false), visible: ko.computed(function() {
+            return blogId() === 0;
+        })},
+        {columnHeader: 'Description', columnName: 'EventDescription', sortable: false, columnWidth: 'auto', sorted: ko.observable(false), sortedDescending: ko.observable(false), visible: true}
+    ]);
 
-        this. _currentPageIndex = 1;
-        var vm = this;
-        this.currentPage = ko.computed({
-            read: function() {
-                return this._currentPageIndex;
-            },
-            write: function(value) {
-                value = parseInt(value);
-                if (isNaN(value) || value < 1 || value > this.pageCount()) {
-                    return;
-                }
-                this._currentPageIndex = value;
-                this.currentPage.notifySubscribers();
-                $('#fdr').val(this._currentPageIndex);
-            },
-            owner: vm
-        });
 
-        this.orderBy = ko.computed({
-            read: function() {
-                var columnInfo = ko.utils.arrayFirst(this.columns(), function(item) { return item.sorted(); })
-                return columnInfo && columnInfo.columnName || '';
-            },
-            write: function(value) {
-                var columnInfo = ko.utils.arrayFirst(this.columns(), function(item) {
-                    return item.columnName === value;
-                });
-                if (columnInfo) {
-                    ko.utils.arrayForEach(this.columns(), function(item) {
-                        item.sorted(false);
-                        item.sortedDescending(false);
-                    });
-                    columnInfo.sorted(value)
-                }
-            }
-        }, this);
-        this.orderByDescending = ko.computed({
-            read: function() {
-                var columnInfo = ko.utils.arrayFirst(this.columns(), function(item) { return item.sorted(); })
-                return columnInfo && columnInfo.sortedDescending();
-            },
-            write: function(value) {
-                var columnInfo = ko.utils.arrayFirst(this.columns(), function(item) { return item.sorted(); })
-                columnInfo && columnInfo.sortedDescending(value);
-            }
-        }, this);
+    var _initialPageSize = parseInt($.cookie('wpph_ck_page_size'), 10);
+    if (availablePageSize.indexOf(_initialPageSize) < 0) {
+        _initialPageSize = availablePageSize()[1];
     }
 
-    AuditLogViewModel.prototype.onCurrentPageInputKeyDown = function(viewModel, event) {
-        if (event.keyCode === 13) {
-            var value = parseInt(event.currentTarget.value);
-            if (isNaN(value) || value < 1 || value > viewModel.pageCount()) {
-                viewModel.currentPage(viewModel._currentPageIndex);
-                viewModel.currentPage.notifySubscribers();
+    var pageSize = ko.observable(_initialPageSize);
+    var selectedPageSize = ko.observable(_initialPageSize);
+    var pageCount = ko.computed(function() {
+        return Math.ceil(totalEventsCount() / pageSize());
+    });
+
+    var _currentPageIndex = 1;
+    var currentPage = ko.computed({
+        read: function() {
+            return _currentPageIndex;
+        },
+        write: function(value) {
+            value = parseInt(value, 10);
+            if (isNaN(value) || value < 1 || value > pageCount()) {
                 return;
             }
-            viewModel.currentPage(value);
-            viewModel.refreshEvents(viewModel, ( viewModel._currentPageIndex - 1) * viewModel.pageSize());
+            _currentPageIndex = value;
+            currentPage.notifySubscribers();
+            $('#fdr').val(_currentPageIndex);
+        }
+    });
+
+    var orderBy = ko.computed({
+        read: function() {
+            var columnInfo = ko.utils.arrayFirst(columns(), function(item) { return item.sorted(); });
+            return columnInfo && columnInfo.columnName || '';
+        },
+        write: function(value) {
+            var columnInfo = ko.utils.arrayFirst(columns(), function(item) {
+                return item.columnName === value;
+            });
+            if (columnInfo) {
+                ko.utils.arrayForEach(columns(), function(item) {
+                    item.sorted(false);
+                    item.sortedDescending(false);
+                });
+                columnInfo.sorted(value);
+            }
+        }
+    });
+    var orderByDescending = ko.computed({
+        read: function() {
+            var columnInfo = ko.utils.arrayFirst(columns(), function(item) { return item.sorted(); });
+            return !!(columnInfo && columnInfo.sortedDescending());
+        },
+        write: function(value) {
+            var columnInfo = ko.utils.arrayFirst(columns(), function(item) { return item.sorted(); });
+            if (columnInfo) columnInfo.sortedDescending(value);
+        }
+    });
+
+
+    function loadRemoteData(newOffset, bid) {
+        newOffset = newOffset || 0;
+
+        var _blogId = null;
+
+        if(bid !== null){
+            _blogId = bid;
+        }
+        else {
+            _blogId = parseInt(blogId(), 10);
+            if (isNaN(_blogId)) _blogId = undefined;
+        }
+
+        var data = {
+            action: 'wpph_get_events',
+            orderBy: orderBy(),
+            sort: orderByDescending() ? 'desc' : 'asc',
+            offset: newOffset,
+            count: pageSize(),
+            blogID: _blogId
+        };
+
+        // busy property possible?
+        AjaxLoaderShow(__ajaxLoaderTargetElement__);
+        loading(true);
+
+        $.ajax({ url: ajaxurl, cache: false, type: 'POST', data: data, dataType: 'json' })
+            .then(function (response) {
+                if (response.dataSource.blogs) {
+                    blogList.removeAll();
+                    ko.utils.arrayPushAll(blogList(), response.dataSource.blogs);
+                }
+
+                if (response.error.length > 0) {
+                    error(response.error);
+                    events.removeAll();
+                    totalEventsCount(0);
+                    offset(0);
+                    $('#wpph_ew').attr('colspan', _blogId===undefined ? 8 : 7);
+                    return;
+                }
+                events(response.dataSource.events);
+                totalEventsCount(response.dataSource.eventsCount);
+                offset(newOffset);
+
+                if (response.dataSource.blogID) {
+                    blogId(response.dataSource.blogID);
+                }
+
+                if (totalEventsCount() < offset()) {
+                    offset(0);
+                }
+
+                if (offset() === 0) {
+                    currentPage(1);
+                }
+                else { currentPage(1 + offset() / pageSize()); }
+            })
+            .fail(function () {
+                //Report data loading error
+                error("An error occurred while loading data. Please try again in a few moments.");
+                events.removeAll();
+                totalEventsCount(0);
+                offset(0);
+            })
+            .always(function () {
+                loading(false);
+                AjaxLoaderHide(__ajaxLoaderTargetElement__);
+            });
+    }
+
+    function onCurrentPageInputKeyDown(viewModel, event) {
+        if (event.keyCode === 13) {
+            var value = parseInt(event.currentTarget.value, 10);
+            if (isNaN(value) || value < 1 || value > pageCount()) {
+                currentPage(_currentPageIndex);
+                currentPage.notifySubscribers();
+                return;
+            }
+            currentPage(value);
+            refreshEvents((_currentPageIndex - 1) * pageSize());
             return false;
         }
         return true;
-    };
+    }
+
+    function onRefreshEvents() {
+        refreshEvents(0, blogId());
+    }
+
+    function onApplyPageSize() {
+        applyPageSize();
+    }
+
+    function onApplySorting(columnItem) {
+        applySorting(columnItem);
+    }
 
 
-
-    AuditLogViewModel.prototype.applyPageSize = function(viewModel){
-        var newPageSize = parseInt(viewModel.selectedPageSize());
-        viewModel.pageSize(newPageSize);
+    function applyPageSize(){
+        var newPageSize = parseInt(selectedPageSize(), 10);
+        pageSize(newPageSize);
         var secureCookie = false;
         if (window.location.href.indexOf('https://') > -1) {
             secureCookie = true;
         }
         $.cookie('wpph_ck_page_size', newPageSize, {secure: secureCookie});
-        viewModel.refreshEvents(viewModel, 0);
-    };
+        refreshEvents(0);
+    }
 
-    AuditLogViewModel.prototype.applySorting = function(viewModel, columnInfo) {
-        if (viewModel.orderBy() == columnInfo.columnName) {
-            viewModel.orderByDescending(! viewModel.orderByDescending());
+    function applySorting(columnInfo) {
+        if (orderBy() === columnInfo.columnName) {
+            orderByDescending(! orderByDescending());
         }
         else {
-            viewModel.orderBy(columnInfo.columnName);
-            viewModel.orderByDescending(false);
+            orderBy(columnInfo.columnName);
+            orderByDescending(false);
         }
-        viewModel.refreshEvents(viewModel, 0);
-    };
+        refreshEvents(0);
+    }
 
-    AuditLogViewModel.prototype.nextPage = function(viewModel) {
-        var currentOffset = viewModel.offset();
-        var newOffset = currentOffset + viewModel.pageSize();
 
-        if (newOffset < viewModel.totalEventsCount()) {
-            viewModel.refreshEvents(viewModel, newOffset);
+    function nextPage() {
+        var currentOffset = offset();
+        var newOffset = currentOffset + pageSize();
+
+        if (newOffset < totalEventsCount()) {
+            refreshEvents(newOffset);
         }
-    };
+    }
 
-    AuditLogViewModel.prototype.prevPage = function(viewModel) {
-        var currentOffset = viewModel.offset();
-        var newOffset = currentOffset - viewModel.pageSize();
+    function prevPage() {
+        var currentOffset = offset();
+        var newOffset = currentOffset - pageSize();
 
         if (newOffset >= 0) {
-            viewModel.refreshEvents(viewModel, newOffset);
+            refreshEvents(newOffset);
         }
-    };
+    }
 
-    //TODO
-    AuditLogViewModel.prototype.firstPage = function(viewModel) {
-        if (viewModel.offset() > 0)
-            viewModel.refreshEvents(viewModel, 0);
-    };
+    function firstPage() {
+        if (offset() > 0)
+            refreshEvents(0);
+    }
 
-    //TODO
-    AuditLogViewModel.prototype.lastPage = function(viewModel) {
+    function lastPage() {
         var offset = Math.min(
-            viewModel.totalEventsCount(),
-            viewModel.pageSize() * (viewModel.pageCount() - 1)
+            totalEventsCount(),
+            pageSize() * (pageCount() - 1)
         );
-        if (viewModel.offset() != offset)
-            viewModel.refreshEvents(viewModel, offset);
+        if (offset() !== offset)
+            refreshEvents(offset);
+    }
+
+
+    function refreshEvents(offset, bid) {
+        if (loading()) {
+            console.warn('Cannot refresh events. Still busy!!!');
+            return;
+        }
+    //    console.warn('refreshEvents: %d', offset);
+        if(bid !== null){
+            loadRemoteData(offset, bid);
+        }
+        else { loadRemoteData(offset); }
+    }
+
+
+    return {
+        columns: columns,
+        error: error,
+        loading: loading,
+        events: events,
+        totalEventsCount: totalEventsCount,
+        offset: offset,
+        availablePageSize: availablePageSize,
+
+        isMainSite: isMainSite,
+        blogId: blogId,
+        blogList: blogList,
+
+        pageSize: pageSize,
+        selectedPageSize: selectedPageSize,
+        pageCount: pageCount,
+
+
+        currentPage: currentPage,
+        orderBy: orderBy,
+        orderByDescending: orderByDescending,
+
+        onCurrentPageInputKeyDown: onCurrentPageInputKeyDown,
+        onRefreshEvents: onRefreshEvents,
+        onApplyPageSize: onApplyPageSize,
+        onApplySorting: onApplySorting,
+
+        nextPage: nextPage,
+        prevPage: prevPage,
+        firstPage: firstPage,
+        lastPage: lastPage,
+
+        applyPageSize: applyPageSize,
+        applySorting: applySorting,
+        refreshEvents: refreshEvents
     };
 
-
-    AuditLogViewModel.prototype.refreshEvents = function(viewModel, offset) {
-        loadRemoteData(viewModel, offset);
-    };
-
-    AuditLogViewModel.prototype.cleanRefresh = function(viewModel) {
-        loadRemoteData(viewModel, 0);
-    };
-
-    return AuditLogViewModel;
-
-})(jQuery);
+})(window.jQuery, window.ko);
 
