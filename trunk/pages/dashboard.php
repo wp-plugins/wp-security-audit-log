@@ -13,7 +13,6 @@ if(! WPPH::ready())
     return;
 }
 ?>
-
 <div id="wpph-pageWrapper" class="wrap">
     <h2 class="pageTitle pageTitle-eventViewer">Audit Log Viewer</h2>
     <div id="EventViewerWrapper">
@@ -22,15 +21,23 @@ if(! WPPH::ready())
                 <div class="alignleft">
                     <div style="overflow: hidden;">
                         <input type="button" class="buttonRefreshEventsList button" value="<?php echo __('Refresh Security Alerts List',WPPH_PLUGIN_TEXT_DOMAIN);?>"
-                               style="float: left; display: block;" data-bind="disable: loading, click: cleanRefresh"/>
+                               style="float: left; display: block;" data-bind="disable: loading, click: $root.onRefreshEvents"/>
                         <span class="ajaxLoaderWrapper" style="float: left; display: block; width: 20px; height: 20px; padding: 7px 7px;"><img/></span>
                     </div>
                 </div>
                 <div class="alignleft actions" style="overflow: hidden;">
                     <label class="alignleft" style="margin: 5px 5px 0 0;"><?php echo __('Number of security alerts per page:',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
-                    <select name="actionLimit1" class="actionLimit" data-bind="options: availablePageSize, value: selectedPageSize"></select>
-                    <input type="button" value="Apply" class="button action" data-bind="disable: loading, click: applyPageSize">
+                    <select name="actionLimit1" class="actionLimit" data-bind="options: availablePageSize, value: selectedPageSize, disable: loading"></select>
+                    <input type="button" value="Apply" class="button action" data-bind="disable: loading, click: $root.onApplyPageSize">
                 </div>
+
+                <?php if(WPPH::isMultisite()): ?>
+                <!-- ko if: isMainSite -->
+                <div class="alignleft" style="padding: 2px 0;">
+                    <select id="ntwkBlogs" data-bind="disable: loading, options: blogList, optionsText: 'blogname', optionsValue: 'blog_id', value: blogId"></select>
+                </div>
+                <!-- /ko -->
+                <?php endif;?>
 
                 <div class="tablenav-pages">
                     <span class="displaying-num" data-bind="text: totalEventsCount()+' security alerts'"></span>
@@ -48,29 +55,46 @@ if(! WPPH::ready())
         </div>
         <table class="wp-list-table widefat fixed" cellspacing="0" cellpadding="0">
             <thead>
-                <tr data-bind="foreach: columns">
+                <tr data-bind="foreach: { data: columns, as: 'columnItem' }">
+                    <!-- ko if: columnItem.visible -->
                     <th class="manage-column column-left-align" scope="col"
-                        data-bind="style: {width: columnWidth}, css: { sortable: sortable, sorted: sorted, desc: sortable && sortedDescending(), asc: sortable && !sortedDescending()}">
-                        <a href="#" data-bind="disable: $root.loading, click: $data.sortable ? $root.applySorting.bind($data.columnName, $root) : function() { return false; }">
-                            <span data-bind="text: columnHeader"></span>
+                        data-bind="style: {width: columnItem.columnWidth}, css: { sortable: columnItem.sortable, sorted: columnItem.sorted, desc: columnItem.sortable && columnItem.sortedDescending(), asc: columnItem.sortable && !columnItem.sortedDescending()}">
+                        <a href="#" data-bind="disable: $root.loading, click: columnItem.sortable ? $root.onApplySorting : function() { return false; }">
+                            <span data-bind="text: columnItem.columnHeader"></span>
                             <span class="sorting-indicator"></span>
                         </a>
                     </th>
+                    <!-- /ko -->
                 </tr>
             </thead>
             <tfoot>
-                <tr data-bind="foreach: columns">
+                <tr data-bind="foreach: { data: columns, as: 'columnItem' }">
+                    <!-- ko if: columnItem.visible -->
                     <th class="manage-column column-left-align" scope="col"
-                        data-bind="style: {width: columnWidth}, css: { sortable: sortable, sorted: sorted, desc: sortable && sortedDescending(), asc: sortable && !sortedDescending()}">
-                        <a href="#" data-bind="disable: $root.loading, click: $data.sortable ? $root.applySorting.bind($data.columnName, $root) : function() { return false; }">
-                            <span data-bind="text: columnHeader"></span>
+                        data-bind="style: {width: columnItem.columnWidth}, css: { sortable: columnItem.sortable, sorted: columnItem.sorted, desc: columnItem.sortable && columnItem.sortedDescending(), asc: columnItem.sortable && !columnItem.sortedDescending()}">
+                        <a href="#" data-bind="disable: $root.loading, click: columnItem.sortable ? $root.onApplySorting : function() { return false; }">
+                            <span data-bind="text: columnItem.columnHeader"></span>
                             <span class="sorting-indicator"></span>
                         </a>
                     </th>
+                    <!-- /ko -->
                 </tr>
             </tfoot>
             <tbody id="the-list">
-                <tr data-bind="if: events().length == 0"><td style="padding: 4px !important;" colspan="7"><?php echo __('No security alerts',WPPH_PLUGIN_TEXT_DOMAIN);?></td></tr>
+                <!-- ko if: events().length == 0 -->
+                <tr>
+                    <!-- ko ifnot: error -->
+                    <td id="wpph_ew" style="padding: 4px !important;" colspan="8"><?php echo __('No security alerts',WPPH_PLUGIN_TEXT_DOMAIN);?></td>
+                    <!-- /ko -->
+
+                    <!-- ko if: error -->
+                    <td id="wpph_ew" style="padding: 4px !important;" colspan="8">
+                        <strong data-bind="text: error"></strong>
+                    </td>
+                    <!-- /ko -->
+                </tr>
+                <!-- /ko -->
+
                 <!-- ko foreach: events -->
                 <tr data-bind="css: {'row-0': ($index() % 2) == 0, 'row-1': ($index() % 2) != 0}">
                     <td class="column-event_number"><span data-bind="text: eventNumber"></span></td>
@@ -79,6 +103,9 @@ if(! WPPH::ready())
                     <td class="column-event_category"><span data-bind="text: EventType"></span></td>
                     <td class="column-ip"><span data-bind="text: ip"></span></td>
                     <td class="column-user"><span data-bind="text: user"></span></td>
+                    <!-- ko if: $root.blogId() === 0 -->
+                    <td class="column-site"><span data-bind="text: $data.siteName"></span></td>
+                    <!-- /ko -->
                     <td class="column-description"><span data-bind="html: description"></span></td>
                 </tr>
                 <!-- /ko -->
@@ -89,14 +116,14 @@ if(! WPPH::ready())
                 <div class="alignleft">
                     <div style="overflow: hidden;">
                         <input type="button" class="buttonRefreshEventsList button" value="<?php echo __('Refresh security alerts List',WPPH_PLUGIN_TEXT_DOMAIN);?>"
-                               style="float: left; display: block;" data-bind="disable: loading, click: cleanRefresh"/>
+                               style="float: left; display: block;" data-bind="disable: loading, click: $root.onRefreshEvents"/>
                         <span class="ajaxLoaderWrapper" style="float: left; display: block; width: 20px; height: 20px; padding: 7px 7px;"><img/></span>
                     </div>
                 </div>
                 <div class="alignleft actions" style="overflow: hidden;">
                     <label class="alignleft" style="margin: 5px 5px 0 0;"><?php echo __('Number of security alerts per page:',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
-                    <select name="actionLimit1" class="actionLimit" data-bind="options: availablePageSize, value: selectedPageSize"></select>
-                    <input type="button" value="Apply" class="button action" data-bind="disable: loading, click: applyPageSize">
+                    <select name="actionLimit1" class="actionLimit" data-bind="options: availablePageSize, value: selectedPageSize, disable: loading"></select>
+                    <input type="button" value="Apply" class="button action" data-bind="disable: loading, click: $root.onApplyPageSize">
                 </div>
                 <div class="tablenav-pages">
                     <span class="displaying-num" data-bind="text: totalEventsCount()+' security alerts'"></span>
@@ -114,8 +141,9 @@ if(! WPPH::ready())
 
     </div>
 </div>
-
+<?php global $blog_id; ?>
 <script type="text/javascript">
+    jQuery.WPPH_CRT_BLOG_ID = <?php echo WPPHUtil::isMainSite() ? 0 : $blog_id;?>;
     // configure ajax loader
     var __ajaxLoaderTargetElement__ = jQuery('.ajaxLoaderWrapper img');
     var AjaxLoaderCreate = function(e){
@@ -124,12 +152,14 @@ if(! WPPH::ready())
     }(__ajaxLoaderTargetElement__);
     var AjaxLoaderShow = function(e){ e.show(); };
     var AjaxLoaderHide = function(e){ e.hide(); };
-
     jQuery(document).ready(function($) {
-        var myViewModel = new AuditLogViewModel();
-        ko.applyBindings(myViewModel, $('#wpph-pageWrapper').get(0));
+        var myViewModel = AuditLogViewModel;
+        myViewModel.isMainSite(!!<?php echo WPPHUtil::isMainSite() ? '1': '0';?>);
         myViewModel.orderBy('EventNumber');
         myViewModel.orderByDescending(true);
-        myViewModel.cleanRefresh(myViewModel);
+        ko.applyBindings(myViewModel, $('#wpph-pageWrapper').get(0));
+        setTimeout(function() {
+            myViewModel.refreshEvents(0, jQuery.WPPH_CRT_BLOG_ID);
+        });
     });
 </script>

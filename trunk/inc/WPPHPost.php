@@ -42,7 +42,7 @@ class WPPHPost
         // custom post type
         else {
             self::$currentPostType = $data['post_type'];
-            wpphLog('================================== CURRENT POST TYPE: '.self::$currentPostType);
+            wpphLog('CURRENT POST TYPE: '.self::$currentPostType);
             if(self::postAuthorChanged($GLOBALS['WPPH_POST_AUTHOR_UPDATED_ID'], $postArray['ID'], wp_get_current_user()->ID, $data['post_title'], 2038, true)){
                 $GLOBALS['WPPH_POST_AUTHOR_UPDATED'] = true;
             }
@@ -53,6 +53,16 @@ class WPPHPost
     // 2019 & 2020 & 2038
     static function postAuthorChanged($newAuthorID, $postID, $userID, $postTitle, $event, $quickFormEnabled = false)
     {
+        wpphLog(__METHOD__.'() triggered.',array('params'=> func_get_args()));
+        if(empty($postID)){
+            wpphLog('Error: $postID is empty. Invalid function call.');
+            return false;
+        }
+        if(empty($newAuthorID)){
+            wpphLog('Error: $newAuthorID is empty. Invalid function call.');
+            return false;
+        }
+
         global $wpdb;
         $oldAuthorID = $wpdb->get_var("SELECT post_author FROM ".$wpdb->posts." WHERE ID = ".$postID);
 
@@ -72,6 +82,7 @@ class WPPHPost
                 $n = $o;
                 $o = $t;
             }
+            $userID = (int)$userID;
             if(self::isCustomPost()){
                 WPPHEvent::_addLogEvent($event, $userID, WPPHUtil::getIP(), array($postTitle,ucfirst(self::$currentPostType),$n,$o));
             }

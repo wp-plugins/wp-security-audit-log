@@ -33,25 +33,75 @@ class WPPHUtil
         if(isset($_POST['offset'])) { $limit[0] = intval($_POST['offset']); }
         if(isset($_POST['count'])) { $limit[1] = intval($_POST['count']); }
 
-        function __formatJsonOutput(array $sourceData=array(), $error=''){
-            return json_encode(array(
-                'dataSource' => $sourceData,
-                'error' => $error
-            ));
-        };
-
-        // get events
-        $eventsCount = WPPHDB::getEventsCount();
-        $events = WPPHEvent::getEvents($orderBy, $sort, $limit);
-
-        $eventsNum = count($events);
-
-        if($eventsNum == 0){
-            exit( __formatJsonOutput(array(),__('There are no security alerts to display.',WPPH_PLUGIN_TEXT_DOMAIN)) );
-        }
+        global $current_user, $blog_id;
 
         $out = array();
         $out['events'] = array();
+        $globalBlogID = $blog_id;
+        $is_wpmu = WPPH::isMultisite();
+        $isMainSite = WPPHUtil::isMainSite();
+        $isSA = false;
+        $allSites = false;
+
+        $blogList = ($isMainSite && $is_wpmu) ? self::get_blogs() : array();
+        function _getBlogName($id, $blogList) {
+            for ($i = 0; $i < count($blogList); $i++) {
+                if ($blogList[$i]['blog_id'] == $id) {
+                    return $blogList[$i]['blogname'];
+                }
+            }
+        }
+
+        if(!isset($_POST['blogID']) || empty($_POST['blogID'])){
+            if($isMainSite){
+                $postedBlogID = 0; // get the events for all sites by default
+                $allSites = true;
+            }
+            else {
+                $postedBlogID = $globalBlogID;
+                $allSites = false;
+            }
+        }
+        else { $postedBlogID = intval($_POST['blogID']); }
+
+        if($is_wpmu){ $isSA = is_super_admin($current_user->ID); }
+        else {
+            if(empty($postedBlogID)){
+                $postedBlogID = 1;
+            }
+        }
+
+        if($is_wpmu && !$isSA)
+        {
+            // Only Super Admin can view other blogs' alerts
+            if($globalBlogID <> $postedBlogID){
+                $out['blogs'] = $blogList;
+                exit( wpph_formatJsonOutput($out,__('There are no security alerts to display.',WPPH_PLUGIN_TEXT_DOMAIN)) );
+            }
+        }
+
+        if(! $isMainSite){ $postedBlogID = $globalBlogID; }
+
+        // get events
+        if($allSites){
+            $eventsCount = WPPHDB::getEventsCount(0);
+            $events = WPPHEvent::getEvents($orderBy, $sort, $limit, 0);
+        }
+        else {
+            $eventsCount = WPPHDB::getEventsCount($postedBlogID);
+            $events = WPPHEvent::getEvents($orderBy, $sort, $limit, $postedBlogID);
+        }
+        $eventsNum = count($events);
+
+        wpphLog("GETTING EVENTS FOR ".(empty($postedBlogID) ? 'ALL BLOGS' : 'BLOG: '.$postedBlogID).". Num events: $eventsNum");
+
+        if($eventsNum == 0){
+            if($is_wpmu){
+                $out['blogs'] = $blogList;
+                exit( wpph_formatJsonOutput($out,__('There are no security alerts to display.',WPPH_PLUGIN_TEXT_DOMAIN)) );
+            }
+            exit( wpph_formatJsonOutput(array(),__('There are no security alerts to display.',WPPH_PLUGIN_TEXT_DOMAIN)) );
+        }
 
         // prepare output
         foreach($events as $entry)
@@ -62,6 +112,7 @@ class WPPHUtil
             $EventDate = $entry->EventDate;
             $userIP = $entry->UserIP;
             $UserID = $entry->UserID;
+            $blogId = $entry->BlogId;
             $eventData = ((!empty($entry->EventData)) ? unserialize(base64_decode($entry->EventData)) : ''); //<< values to use for event description
 
             $eventCount = intval($entry->EventCount);
@@ -95,13 +146,34 @@ class WPPHUtil
                 'eventDate' => $EventDate,
                 'ip' => $userIP,
                 'user' => $username,
+                'siteName' => $allSites ? _getBlogName($blogId, $blogList) : '',
                 'description' => stripslashes($evm)
             );
             array_push($out['events'], $e);
         }
         $out['eventsCount'] = $eventsCount;
+        $out['blogID'] = $postedBlogID;
+        $out['blogs'] = $blogList;
+        exit(wpph_formatJsonOutput($out));
+    }
 
-        exit(__formatJsonOutput($out));
+    // @since v0.6
+    static function get_blogs()
+    {
+        if(wp_is_large_network()){
+            return get_blog_details(get_option(WPPH_MAIN_SITE_ID_OPTION_NAME),true);
+        }
+        $blogs = wp_get_sites();
+        $out = array();
+        foreach($blogs as $blog){
+            $entry = get_blog_details($blog['blog_id']);
+            array_push($out, array(
+                'blog_id' => $entry->blog_id,
+                'blogname' => $entry->blogname
+            ));
+        }
+        array_unshift($out, array('blog_id' => 0, 'blogname' => 'All sites'));
+        return $out;
     }
 
     static function addDashboardWidget()
@@ -110,7 +182,7 @@ class WPPHUtil
         {
             $currentUser = wp_get_current_user();
             if(WPPHUtil::isAdministrator($currentUser->ID)|| WPPHUtil::isAllowedAccess($currentUser->ID) || WPPHUtil::isAllowedChange($currentUser->ID)){
-                    wp_add_dashboard_widget('wpphPluginDashboardWidget', __('Latest WordPress Security Alerts').' | WP Security Audit Log', array(get_class(),'createDashboardWidget'));
+                wp_add_dashboard_widget('wpphPluginDashboardWidget', __('Latest WordPress Security Alerts').' | WP Security Audit Log', array(get_class(),'createDashboardWidget'));
             }
         }
     }
@@ -188,7 +260,7 @@ class WPPHUtil
      */
     static function isAllowedAccess()
     {
-        $data = get_option(WPPH_PLUGIN_ALLOW_ACCESS_OPTION_NAME, array());
+        $data = WPPHNetwork::getGlobalOption(WPPH_PLUGIN_ALLOW_ACCESS_OPTION_NAME, true, true, array());
         if(empty($data)){return false;}
         $userID = wp_get_current_user()->ID;
         $userInfo = WPPHDB::getUserInfo($userID);
@@ -201,7 +273,7 @@ class WPPHUtil
      */
     static function isAllowedChange()
     {
-        $data = get_option(WPPH_PLUGIN_ALLOW_CHANGE_OPTION_NAME, array());
+        $data = WPPHNetwork::getGlobalOption(WPPH_PLUGIN_ALLOW_CHANGE_OPTION_NAME, true, true, array());
         if(empty($data)){return false;}
         $userID = wp_get_current_user()->ID;
         $userInfo = WPPHDB::getUserInfo($userID);
@@ -212,14 +284,23 @@ class WPPHUtil
      * @since v0.5
      * @return bool False if value was not updated and true if value was updated.
      */
-    static function saveAllowAccessUserList(array $data) {return update_option(WPPH_PLUGIN_ALLOW_ACCESS_OPTION_NAME, $data);}
+    static function saveAllowAccessUserList(array $data)
+    {
+        $result = WPPHNetwork::updateGlobalOption(WPPH_PLUGIN_ALLOW_ACCESS_OPTION_NAME, $data, true, true);
+        wpphLog(__METHOD__.'() result:', array('data'=> $data, 'result'=>$result));
+        return $result;
+    }
     /**
      * @param array $data
      * @since v0.5
      * @return bool False if value was not updated and true if value was updated.
      */
-    static function saveAllowedChangeUserList(array $data){return update_option(WPPH_PLUGIN_ALLOW_CHANGE_OPTION_NAME, $data);}
-
+    static function saveAllowedChangeUserList(array $data)
+    {
+        $result = WPPHNetwork::updateGlobalOption(WPPH_PLUGIN_ALLOW_CHANGE_OPTION_NAME, $data, true, true);
+        wpphLog(__METHOD__.'() result:', array('data'=> $data, 'result'=>$result));
+        return $result;
+    }
 
 
     /**
@@ -227,9 +308,12 @@ class WPPHUtil
      * @since v0.5
      * @return bool
      */
-    static function saveInitialAccessChangeList(){
-        self::saveAllowAccessUserList(array());
-        self::saveAllowedChangeUserList(array());
+    static function saveInitialAccessChangeList()
+    {
+        if(self::isMainSite()){
+            WPPHNetwork::addGlobalOption(WPPH_PLUGIN_ALLOW_ACCESS_OPTION_NAME, array(), true, true);
+            WPPHNetwork::addGlobalOption(WPPH_PLUGIN_ALLOW_CHANGE_OPTION_NAME, array(), true, true);
+        }
     }
 
     // ajax
@@ -275,5 +359,13 @@ class WPPHUtil
     static function _roleExists($role){
         global $wp_roles;
         return (isset($wp_roles->roles[$role]) ? true : false);
+    }
+
+    static function isMainSite(){
+        if (WPPH::isMultisite()) {
+            global $current_site, $blog_id;
+            return ($current_site->id == $blog_id);
+        }
+        return true;
     }
 }

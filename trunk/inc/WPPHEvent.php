@@ -147,13 +147,39 @@ class WPPHEvent
 
 // 6xxx - System events
             // #6000 Events automatically deleted by system.
-            array( 'id' => 6000, 'category' => WPPH_E_NOTICE_TEXT, 'text' => __('Events automatically deleted by system.',WPPH_PLUGIN_TEXT_DOMAIN)),
+            array( 'id' => 6000, 'category' => WPPH_E_NOTICE_TEXT, 'text' => __('Alerts automatically deleted by system.',WPPH_PLUGIN_TEXT_DOMAIN)),
             // #6001 - <strong>%s</strong> the option Anyone can register
             array( 'id' => 6001, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('<strong>%s</strong> the option Anyone can register',WPPH_PLUGIN_TEXT_DOMAIN)),
             // #6002 - Changed the New User Default Role from <strong>%s</strong> to <strong>%s</strong>
             array( 'id' => 6002, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('Changed the New User Default Role from <strong>%s</strong> to <strong>%s</strong>',WPPH_PLUGIN_TEXT_DOMAIN)),
             // #6003 - Changed the WordPress administrator notifications email address from %old_email% to %new_mail%
             array( 'id' => 6003, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('Changed the WordPress administrator notifications email address from <strong>%s</strong> to <strong>%s</strong>',WPPH_PLUGIN_TEXT_DOMAIN)),
+
+
+// xxxx - MultiSite Events
+
+// #4008 - Granted Super Admin privileges from <strong>%user%</strong>
+            array( 'id' => 4008, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('Granted Super Admin privileges to <strong>%s</strong>',WPPH_PLUGIN_TEXT_DOMAIN)),
+// #4009 - Revoked Super Admin privileges from <strong>%user%</strong>
+            array( 'id' => 4009, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('Revoked Super Admin privileges from <strong>%s</strong>',WPPH_PLUGIN_TEXT_DOMAIN)),
+// #4010 - Added existing user %user% with %role% role to site %site%
+            array( 'id' => 4010, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('Added existing user <strong>%s</strong> with role <strong>%s</strong> to site <strong>%s</strong>',WPPH_PLUGIN_TEXT_DOMAIN)),
+// #4011 - Removed user %user% with role %role% from %site% site
+            array( 'id' => 4011, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('Removed user <strong>%s</strong> with role <strong>%s</strong> from site <strong>%s</strong>',WPPH_PLUGIN_TEXT_DOMAIN)),
+// #4012 - Created a new network user %user%
+            array( 'id' => 4012, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('Created a new network user <strong>%s</strong>',WPPH_PLUGIN_TEXT_DOMAIN)),
+// #7000 - Added <strong>%site%</strong> to the network
+            array( 'id' => 7000, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('Added site <strong>%s</strong> to the network',WPPH_PLUGIN_TEXT_DOMAIN)),
+// #7001 - Archived site <strong>%site%</strong>
+            array( 'id' => 7001, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('Archived site <strong>%s</strong>',WPPH_PLUGIN_TEXT_DOMAIN)),
+// #7002 - Unarchived site <strong>%site%</strong>
+            array( 'id' => 7002, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('Unarchived site <strong>%s</strong>',WPPH_PLUGIN_TEXT_DOMAIN)),
+// #7003 - Activated site <strong>%site%</strong>
+            array( 'id' => 7003, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('Activated site <strong>%s</strong>',WPPH_PLUGIN_TEXT_DOMAIN)),
+// #7004 - Deactivated site <strong>%site%</strong>
+            array( 'id' => 7004, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('Deactivated site <strong>%s</strong>',WPPH_PLUGIN_TEXT_DOMAIN)),
+// #7005 - Deleted site <strong>%site%</strong>
+            array( 'id' => 7005, 'category' => WPPH_E_HIGH_TEXT, 'text' => __('Deleted site <strong>%s</strong>',WPPH_PLUGIN_TEXT_DOMAIN)),
         );
     }
 
@@ -217,10 +243,10 @@ class WPPHEvent
             }
 
             $_postType = $postType;
-            if(! in_array($postType, array('post','page'))){
+            if($_postType != 'post' && $_postType != 'page'){
                 $_postType = 'custom';
             }
-            do_action('wpph_set_post_type',$postType);
+            do_action('wpph_set_post_type',$_postType);
 
             /*
              * CHECK IF POST/PAGE AUTHOR UPDATED; 2019
@@ -232,7 +258,7 @@ class WPPHEvent
                 $GLOBALS['WPPH_POST_AUTHOR_UPDATED_ID'] = intval($_POST['post_author']);
                 if(isset($GLOBALS['WPPH_SCREEN_EDITOR_ENABLED'])){
                     // trigger hook manually
-                    add_filter('wp_insert_post_data', array('WPPHPost','managePostAuthorUpdateQuickEditForm'), '1', 2);
+                    add_filter('wp_insert_post_data', array('WPPHPost','managePostAuthorUpdateQuickEditForm'), 1, 2);
                 }
             }
 
@@ -248,6 +274,7 @@ class WPPHEvent
             {
                 // before further checks, we have to make sure this post isn't new
                 if(! $postExists){
+                    wpphLog("POST DOES NOT EXISTS.");
                     return;
                 }
 
@@ -287,6 +314,20 @@ class WPPHEvent
                 */
                 $GLOBALS['WPPH_POST_NEW_URL'] = get_permalink($pid);
             }
+            wpphLog('GLOBAL VARIABLES', array(
+                'WPPH_POST_AUTHOR_UPDATED_ID' => $GLOBALS['WPPH_POST_AUTHOR_UPDATED_ID'],
+                'WPPH_POST_EXISTS' => $GLOBALS['WPPH_POST_EXISTS'],
+                'WPPH_POST_PWD_PROTECTED' => $GLOBALS['WPPH_POST_PWD_PROTECTED'],
+                'WPPH_OLD_POST_PASSWORD' => $GLOBALS['WPPH_OLD_POST_PASSWORD'],
+                'WPPH_POST_OLD_DATE' => $GLOBALS['WPPH_POST_OLD_DATE'],
+                'WPPH_POST_OLD_NAME' => $GLOBALS['WPPH_POST_OLD_NAME'],
+                'WPPH_POST_OLD_CATEGORIES' => isset($GLOBALS['WPPH_POST_OLD_CATEGORIES']) ? $GLOBALS['WPPH_POST_OLD_CATEGORIES'] : '',
+                'WPPH_POST_NEW_URL' => $GLOBALS['WPPH_POST_NEW_URL'],
+                'post_type' => $postType,
+                'WPPH_DEFAULT_EDITOR_ENABLED' => isset($GLOBALS['WPPH_DEFAULT_EDITOR_ENABLED']) ? 'true' : 'false',
+                'WPPH_SCREEN_EDITOR_ENABLED' => isset($GLOBALS['WPPH_SCREEN_EDITOR_ENABLED']) ? 'true' : 'false',
+                )
+            );
         }
     }
 
@@ -303,8 +344,16 @@ class WPPHEvent
 
 // 4xxx - User profile events
 
-    // 4000, 4001
-    static function hookUserRegisterEvent() { add_action('user_register', array('WPPHEventWatcher', 'watchEventUserRegister')); }
+    // 4000, 4001, 4012
+    static function hookUserRegisterEvent()
+    {
+        if(WPPH::isMultisite()){
+            // 4012
+            add_action('user_register', array('WPPHEventWatcher', 'watchWpmuUserRegister'));
+        }
+        // 4000 & 4001
+        else { add_action('user_register', array('WPPHEventWatcher', 'watchEventUserRegister')); }
+    }
     // 4002
     static function hookUserRoleUpdated() {
         add_action('edit_user_profile_update', array('WPPHEventWatcher', 'watchUserInfoUpdated'));
@@ -320,6 +369,12 @@ class WPPHEvent
         add_action('edit_user_profile_update', array('WPPHEventWatcher', 'watchUserInfoUpdated'));
         add_action('personal_options_update', array('WPPHEventWatcher', 'watchUserInfoUpdated'));
     }
+    // 4008
+    static function hookUserAdminPriv() {
+        add_action('edit_user_profile_update', array('WPPHEventWatcher', 'watchUserAdminPrivUpdated'));
+        add_action('personal_options_update', array('WPPHEventWatcher', 'watchUserAdminPrivUpdated'));
+    }
+
     // 4007
     static function hookUserDeletion() { add_action( 'delete_user', array('WPPHEventWatcher', 'watchUserDeletion') ); }
 
@@ -339,11 +394,35 @@ class WPPHEvent
 
 // 6xxx - System events
 
-    // 6000
-    static function hookEventsDeletion() { add_action('init', array('WPPHEventWatcher', 'watchDeleteEvents')); }
 
-    // 6001, 6002
+    // Events: 6001, 6002 are not available in MultiSite.
+    // 6001, 6002, 6003
     static function hookCheckWpGeneralSettings(){
+        if(WPPH::isMultisite())
+        {
+            if(isset($_POST))
+            {
+                if(isset($_POST['_wp_http_referer']) && !empty($_POST['_wp_http_referer'])){
+                   $wp_referrer = $_POST['_wp_http_referer'];
+                    if(false === ($pos = stripos($wp_referrer,'settings.php'))){
+                        return;
+                    }
+                    // 6003
+                    if(! empty($_POST['admin_email'])){
+                        $from = get_option('admin_email');
+                        $to = trim($_POST['admin_email']);
+                        if(strcasecmp($from,$to)!=0){
+                            wpphLog('Admin email changed',array(
+                                'from' => $from,
+                                'to' => $to
+                            ));
+                            self::_addLogEvent(6003, wp_get_current_user()->ID, WPPHUtil::getIP(), array($from, $to));
+                        }
+                    }
+                }
+            }
+            return;
+        }
         if(isset($_POST))
         {
             $wpphOptData = get_option(WPPH_USERS_CAN_REGISTER_OPT_NAME);
@@ -398,7 +477,7 @@ class WPPHEvent
 
 
     /**
-     * Add log event. Internal function. Don not use outside class scope.
+     * Add log event. Internal function. Do not use outside class scope.
      * @internal
      * @static
      * @param int $eventID
@@ -406,10 +485,24 @@ class WPPHEvent
      * @param string $userIP
      * @param array $eventData Optional. If provided should be as an array.
      * @param string $failedLoginUserName The name of the user used for the failed login
+     * @param int $blogID The blog id for which the event is triggered. If omitted, the global $blog_id variable will be used.
      * @return bool
      */
-    static function _addLogEvent($eventID = 1000, $userID = 0, $userIP = '', $eventData = array(), $failedLoginUserName='')
+    static function _addLogEvent($eventID = 1000, $userID = 0, $userIP = '', $eventData = array(), $failedLoginUserName='', $blogID = null)
     {
+        $params = func_get_args();
+            wpphLog(__METHOD__.'() called with params:', $params);
+        wpphLog(__METHOD__.'() triggered.');
+        if(empty($blogID)){
+            wpphLog('The blog ID was not provided. Trying to use the global $blog_id');
+            global $blog_id; // try to get the current blog id if none provided
+            if(empty($blog_id)){
+                wpphLog('The blog ID could not be determined. Ignoring request for adding the log event.');
+                return true;
+            }
+        }
+        else { $blog_id = $blogID; }
+
         if(! wpph_isEventEnabled($eventID)){
             wpphLog('Event '.$eventID.' is not enabled. Ignoring request.');
             return true;
@@ -418,7 +511,7 @@ class WPPHEvent
         if(empty($userIP)){ $userIP = WPPHUtil::getIP(); }
         $tableName = WPPHDB::getFullTableName('MAIN');
         $eventData = base64_encode(serialize($eventData));
-        $query = sprintf("INSERT INTO $tableName (EventID, UserID, UserIP, EventData,UserName) VALUES(%d, %d, '%s', '%s', '%s')",$eventID, $userID, $userIP, $eventData, $failedLoginUserName);
+        $query = sprintf("INSERT INTO $tableName (EventID, UserID, UserIP, EventData, UserName, BlogId) VALUES(%d, %d, '%s', '%s', '%s', %d)",$eventID, $userID, $userIP, $eventData, $failedLoginUserName,$blog_id);
 
         global $wpdb;
         if($eventID == 1002){ // 1002 == failed login
@@ -453,12 +546,13 @@ class WPPHEvent
 
     /**
      * Retrieve the events from db.
-     * @param array $limit
      * @param string $orderBy. Must be a valid column name. Defaults to EventNumber
      * @param string $sort  ASC or DESC
+     * @param array $limit
+     * @param integer $blogId
      * @return mixed
      */
-    static function getEvents($orderBy='EventNumber', $sort = 'DESC', $limit = array(0,0))
+    static function getEvents($orderBy='EventNumber', $sort = 'DESC', $limit = array(0,0), $blogId = 1)
     {
         $validArgsSort = array('ASC', 'DESC');
         $validCnTableLogDetails = array('EventID', 'EventType');
@@ -486,14 +580,15 @@ class WPPHEvent
         $t1 = WPPHDatabase::getFullTableName('main');
         $t2 = WPPHDatabase::getFullTableName('events');
         global $wpdb;
-        $query = "SELECT le.EventNumber, le.EventID, le.EventDate, le.UserID, le.UserIP, le.EventData, le.EventCount, le.UserName,
-                                          led.EventType, led.EventDescription
-                                        FROM `$t1` as le
-                                          INNER JOIN `$t2` as led
-                                            ON le.EventID = led.EventID
-                                              ORDER BY $orderBy
-                                              $sort
-                                              LIMIT $limit;";
+        $query = "SELECT le.EventNumber, le.EventID, le.EventDate, le.UserID, le.UserIP, le.EventData, le.EventCount, le.UserName, le.BlogId,
+                      led.EventType, led.EventDescription
+                    FROM `$t1` as le
+                      INNER JOIN `$t2` as led
+                        ON le.EventID = led.EventID
+                      WHERE ($blogId = 0) OR (le.BlogId = $blogId)
+                      ORDER BY $orderBy
+                          $sort
+                      LIMIT $limit;";
         return $wpdb->get_results($query, ARRAY_A);
     }
 
@@ -530,6 +625,7 @@ class WPPHEventWatcher extends WPPHEvent
         self::_addLogEvent(1001, wp_get_current_user()->ID);
     }
 
+
     /**
      * @internal
      * Hooks to the user register event
@@ -545,6 +641,8 @@ class WPPHEventWatcher extends WPPHEvent
         $uInfo = WPPHDB::getUserInfo($user_id);
         $nu = $uInfo['userName'];
         $nur = ucfirst($uInfo['userRole']);
+
+        wpphLog(__METHOD__.'() -> USER INFO', array('user_id'=>$user_id, 'current_user'=>$current_user, 'user_info'=>$uInfo));
 
         if($un == 'System')
         {
@@ -564,37 +662,17 @@ class WPPHEventWatcher extends WPPHEvent
      * @internal
      * Hooks to the events deletion event
      */
-    static function watchDeleteEvents()
-    {
-        wpphLog(__METHOD__.'() triggered by hook.');
-
-        if((defined('DISABLE_WP_CRON') && 'DISABLE_WP_CRON'))
-        {
-            wpphLog('wp-cron is disabled.');
-            self::__deleteEvents();
-        }
-        else{
-            add_action(WPPH_PLUGIN_DEL_EVENTS_CRON_TASK_NAME, array('WPPHEventWatcher','__deleteEvents'));
-            if ( ! wp_next_scheduled(WPPH_PLUGIN_DEL_EVENTS_CRON_TASK_NAME)) {
-                wp_schedule_event( time(), 'daily', WPPH_PLUGIN_DEL_EVENTS_CRON_TASK_NAME );
-                wpphLog(__METHOD__.'() scheduled by wp-cron.');
-            }
-        }
-    }
-
-    //@internal
     static function __deleteEvents()
     {
+        wpphLog(__METHOD__.'() triggered.');
+
         // check settings and delete the events (if any)
         $settings = WPPH::getPluginSettings();
 
-        //if wp-cron disabled
-        if((defined('DISABLE_WP_CRON') && 'DISABLE_WP_CRON'))
-        {
-            if($settings->cleanupRan == 1){
-                wpphLog(__METHOD__.'() Ignored. Cleanup already ran today.');
-                return;
-            }
+        $runCleanup  = ((time() - $settings->lastCleanup) < WPPH_CLEANUP_WAIT_TIME);
+        if(! $runCleanup){
+            wpphLog(__METHOD__.'() Ignored. Not enough time elapsed between deletion requests.');
+            return;
         }
 
         // check to see how we should do the cleanup (by days or by number)
@@ -631,40 +709,96 @@ class WPPHEventWatcher extends WPPHEvent
     // delete by days
     private static function _deleteEventsOlderThan($days = 1)
     {
-        $query = "DELETE FROM ".WPPHDatabase::getFullTableName('main')." WHERE EventDate < (NOW() - INTERVAL ".$days." DAY)";
         global $wpdb;
-        $result = $wpdb->query($query);
-        if($result === false){ $status = 'Error executing query'; }
-        else { $status = 'Query executed'; }
-        wpphLog(__METHOD__.'('.$days.') called.', array('query'=>$query, 'status'=>$status, 'rowsDeleted'=> (int)$result));
-        return ($result !== false);
+
+        // run for each blog
+        if(WPPH::isMultisite())
+        {
+            $old_blog = $wpdb->blogid;
+            $blogIds = $wpdb->get_col("SELECT blog_id FROM $wpdb->blogs");
+            foreach ($blogIds as $blog_id)
+            {
+                switch_to_blog($blog_id);
+                $query = sprintf("DELETE FROM ".WPPHDatabase::getFullTableName('main')." WHERE BlogID=%d EventDate < (NOW() - INTERVAL %d DAY)",$blog_id, $days);
+                $result = $wpdb->query($query);
+                if($result === false){ $status = 'Error executing query'; }
+                else { $status = 'Query executed'; }
+                wpphLog(__METHOD__.'('.$days.') called for blog: '.$blog_id.'.', array('query'=>$query, 'status'=>$status, 'rowsDeleted'=> (int)$result));
+            }
+            switch_to_blog($old_blog);
+            return true;
+        }
+        else {
+            $query = sprintf("DELETE FROM ".WPPHDatabase::getFullTableName('main')." WHERE EventDate < (NOW() - INTERVAL %d DAY)", $days);
+            $result = $wpdb->query($query);
+            if($result === false){ $status = 'Error executing query'; }
+            else { $status = 'Query executed'; }
+            wpphLog(__METHOD__.'('.$days.') called.', array('query'=>$query, 'status'=>$status, 'rowsDeleted'=> (int)$result));
+            return ($result !== false);
+        }
+
     }
     //@internal
     // delete by number
     private static function _deleteEventsGreaterThan($number = WPPH_KEEP_MAX_EVENTS)
     {
-        if($number > WPPH_KEEP_MAX_EVENTS){ $number = WPPH_KEEP_MAX_EVENTS; }
         global $wpdb;
+        if($number > WPPH_KEEP_MAX_EVENTS){ $number = WPPH_KEEP_MAX_EVENTS; }
         $tableName = WPPHDatabase::getFullTableName('main');
-        $count = $wpdb->get_var("SELECT COUNT(0) FROM $tableName");
-        if(empty($count)){
-            wpphLog(__METHOD__.'('.$number.') called.  Ignored, there are no events in the database');
-            return true;
-        }
-        $keep = $number;
-        if($count > $keep)
+
+        // run for each blog
+        if(WPPH::isMultisite())
         {
-            $limit = $count - $keep;
-            $query = "DELETE FROM $tableName ORDER BY EventDate LIMIT $limit";
-            $result = $wpdb->query($query);
-            if($result === false){ $status = 'Error executing query'; }
-            else { $status = 'Query executed'; }
-            wpphLog(__METHOD__.'('.$number.') called.', array('query'=>$query, 'status'=>$status, 'rowsAffected'=> (int)$result));
-            return ($result !== false);
+            $old_blog = $wpdb->blogid;
+            $blogIds = $wpdb->get_col("SELECT blog_id FROM $wpdb->blogs");
+            foreach ($blogIds as $blog_id)
+            {
+                switch_to_blog($blog_id);
+                $count = $wpdb->get_var(sprintf("SELECT COUNT(0) FROM $tableName WHERE BlogID=%d",$blog_id));
+                if(empty($count)){
+                    wpphLog(__METHOD__.'('.$number.') called for blog id: '.$blog_id.'. Ignored, there are no events for this blog id in the database.');
+                    continue;
+                }
+                $keep = $number;
+                if($count > $keep)
+                {
+                    $limit = $count - $keep;
+                    $query = sprintf("DELETE FROM $tableName WHERE BlogID=%d ORDER BY EventDate LIMIT %d", $blog_id, $limit);
+                    $result = $wpdb->query($query);
+                    if($result === false){ $status = 'Error executing query'; }
+                    else { $status = 'Query executed'; }
+                    wpphLog(__METHOD__.'('.$number.') called for blog id: '.$blog_id.'.', array('query'=>$query, 'status'=>$status, 'rowsAffected'=> (int)$result));
+                    return ($result !== false);
+                }
+                else {
+                    wpphLog(__METHOD__.'('.$number.') called for blog id: '.$blog_id.'.  Ignored, there are not enough events to perform this action.');
+                    continue;
+                }
+            }
+            switch_to_blog($old_blog);
+            return true;
         }
         else {
-            wpphLog(__METHOD__.'('.$number.') called.  Ignored, there are not enough events to trigger this action.');
-            return true;
+            $count = $wpdb->get_var("SELECT COUNT(0) FROM $tableName");
+            if(empty($count)){
+                wpphLog(__METHOD__.'('.$number.') called.  Ignored, there are no events in the database');
+                return true;
+            }
+            $keep = $number;
+            if($count > $keep)
+            {
+                $limit = $count - $keep;
+                $query = "DELETE FROM $tableName ORDER BY EventDate LIMIT $limit";
+                $result = $wpdb->query($query);
+                if($result === false){ $status = 'Error executing query'; }
+                else { $status = 'Query executed'; }
+                wpphLog(__METHOD__.'('.$number.') called.', array('query'=>$query, 'status'=>$status, 'rowsAffected'=> (int)$result));
+                return ($result !== false);
+            }
+            else {
+                wpphLog(__METHOD__.'('.$number.') called.  Ignored, there are not enough events to trigger this action.');
+                return true;
+            }
         }
     }
 
@@ -680,7 +814,7 @@ class WPPHEventWatcher extends WPPHEvent
 
     static function watchUserInfoUpdated($userID)
     {
-        wpphLog(__METHOD__.'() triggered by hook.');
+        wpphLog(__METHOD__.'() triggered by hook.', array('POST DATA'=>$_POST));
 
         // get info for the currently logged in user
         $current_user = wp_get_current_user();
@@ -698,14 +832,14 @@ class WPPHEventWatcher extends WPPHEvent
         if(!empty($_POST['role'])){
             $updatedRole = trim($_POST['role']);
             if(self::_userRoleUpdated($cid, $initialUserRole, $updatedRole, $editedUserName, $cName)){
-                return;
+                //return;
             }
         }
 
         // If a user's password has been updated
         if(!empty($_POST['pass1'])){
             if(self::_userPasswordUpdated($userID, $cid, $cName, $editedUserName, $initialUserRole)){
-                return;
+               // return;
             }
         }
 
@@ -841,40 +975,70 @@ class WPPHEventWatcher extends WPPHEvent
     {
         wpphLog(__METHOD__.'() triggered by hook.');
 
-        // get info for the currently logged in user
-        $current_user = wp_get_current_user();
+        $userID = wp_get_current_user()->ID;
+        $userIP = WPPHUtil::getIP();
 
         // activate one by link
-        if(!empty($_GET['action']) && ($_GET['action']=='activate') || !empty($_GET['action2']) && ($_GET['action2']=='activate'))
+        if(isset($_GET['action']) && ($_GET['action']=='activate') || isset($_GET['action2']) && ($_GET['action2']=='activate'))
         {
-            $pluginFile = $_GET['plugin'];
-            $pluginData = get_plugin_data(WP_PLUGIN_DIR.'/'.$pluginFile,false,false);
-            $pluginName = $pluginData['Name'];
-            self::_addLogEvent(5001,$current_user->ID, WPPHUtil::getIP(), array($pluginName,$pluginFile));
+            wpphLog('------------------------------- 1 ------------------------------');
+            $pluginFile = isset($_GET['plugin']) ? $_GET['plugin'] : null;
+            if(empty($pluginFile)){
+                wpphLog("EMPTY plugin param in GET");
+                return;
+            }
+            $fp = WP_PLUGIN_DIR.'/'.$pluginFile;
+            if(! is_file($fp)){
+                wpphLog("Plugin not found", array('filePath'=>$fp));
+                return;
+            }
+            $pluginData = get_plugin_data($fp,false,false);
+            self::_addLogEvent(5001, $userID, $userIP, array($pluginData['Name'],$pluginFile));
             wpphLog('Plugin activated.', array('plugin file'=>$pluginFile));
+            return;
         }
         // one by bulk
-        elseif(isset($_POST['action']) && ($_POST['action'] == 'activate-selected') || isset($_POST['action2']) && ($_POST['action2'] == 'activate-selected'))
+        elseif(isset($_POST['action']) && ($_POST['action'] == 'activate-selected') || (isset($_POST['action2']) && ($_POST['action2'] == 'activate-selected')))
         {
+            wpphLog('------------------------------- 2 ------------------------------');
             if(! empty($_POST['checked']))
             {
-                foreach($_POST['checked'] as $k=>$pluginFile){
-                    $pluginData = get_plugin_data(WP_PLUGIN_DIR.'/'.$pluginFile,false,false);
-                    $pluginName = $pluginData['Name'];
-                    self::_addLogEvent(5001,$current_user->ID, WPPHUtil::getIP(), array($pluginName,$pluginFile));
+                foreach($_POST['checked'] as $k=>$pluginFile)
+                {
+                    if(empty($pluginFile)){
+                        wpphLog("EMPTY plugin param in POST");
+                        return;
+                    }
+                    $fp = WP_PLUGIN_DIR.'/'.$pluginFile;
+                    if(! is_file($fp)){
+                        wpphLog("Plugin not found", array('filePath'=>$fp));
+                        return;
+                    }
+                    $pluginData = get_plugin_data($fp,false,false);
+                    self::_addLogEvent(5001, $userID, $userIP, array($pluginData['Name'],$pluginFile));
                     wpphLog('Plugin activated.', array('plugin file'=>$pluginFile));
                 }
             }
         }
         // more by bulk
-        elseif(isset($_POST['activate-multi']) && ($_POST['action']=='activate-selected' || $_POST['action2']=='activate-selected'))
+        elseif(isset($_POST['activate-multi']) && ($_POST['action']=='activate-selected' || (isset($_POST['action2']) && $_POST['action2']=='activate-selected')))
         {
+            wpphLog('------------------------------- 3 ------------------------------');
             if(! empty($_POST['checked']))
             {
-                foreach($_POST['checked'] as $k=>$pluginFile){
-                    $pluginData = get_plugin_data(WP_PLUGIN_DIR.'/'.$pluginFile,false,false);
-                    $pluginName = $pluginData['Name'];
-                    self::_addLogEvent(5001,$current_user->ID, WPPHUtil::getIP(), array($pluginName,$pluginFile));
+                foreach($_POST['checked'] as $k=>$pluginFile)
+                {
+                    if(empty($pluginFile)){
+                        wpphLog("EMPTY plugin param in POST");
+                        return;
+                    }
+                    $fp = WP_PLUGIN_DIR.'/'.$pluginFile;
+                    if(! is_file($fp)){
+                        wpphLog("Plugin not found", array('filePath'=>$fp));
+                        return;
+                    }
+                    $pluginData = get_plugin_data($fp,false,false);
+                    self::_addLogEvent(5001, $userID, $userIP, array($pluginData['Name'],$pluginFile));
                     wpphLog('Plugin activated.', array('plugin file'=>$pluginFile));
                 }
             }
@@ -886,72 +1050,62 @@ class WPPHEventWatcher extends WPPHEvent
         wpphLog(__METHOD__.'() triggered by hook.');
 
         // get info for the currently logged in user
-        $current_user = wp_get_current_user();
+        $userID = wp_get_current_user()->ID;
+        $userIP = WPPHUtil::getIP();
 
         // activate one by link
-        if(isset($_GET['action']) && ($_GET['action']=='deactivate') || isset($_GET['action2']) && ($_GET['action2']=='deactivate'))
+        if((isset($_GET['action']) && $_GET['action']=='deactivate') || isset($_GET['action2']) && ($_GET['action2']=='deactivate'))
         {
+            wpphLog('------------------------------- 1 ------------------------------');
             $pluginFile = $_GET['plugin'];
             $pluginData = get_plugin_data(WP_PLUGIN_DIR.'/'.$pluginFile,false,false);
             $pluginName = $pluginData['Name'];
-            self::_addLogEvent(5002,$current_user->ID, WPPHUtil::getIP(), array($pluginName,$pluginFile));
+            self::_addLogEvent(5002, $userID, $userIP, array($pluginName,$pluginFile));
             wpphLog('Plugin deactivated.', array('plugin file'=>$pluginFile));
         }
         // one by bulk
-        elseif(isset($_POST['action']) && ($_POST['action'] == 'deactivate-selected') || isset($_POST['action2']) && ($_POST['action2'] == 'deactivate-selected'))
+        elseif((isset($_POST['action']) && $_POST['action'] == 'deactivate-selected') || isset($_POST['action2']) && ($_POST['action2'] == 'deactivate-selected'))
         {
             if(! empty($_POST['checked']))
             {
+                wpphLog('------------------------------- 2 ------------------------------');
                 foreach($_POST['checked'] as $k=>$pluginFile){
                     $pluginData = get_plugin_data(WP_PLUGIN_DIR.'/'.$pluginFile,false,false);
                     $pluginName = $pluginData['Name'];
-                    self::_addLogEvent(5002,$current_user->ID, WPPHUtil::getIP(), array($pluginName,$pluginFile));
+                    self::_addLogEvent(5002, $userID, $userIP, array($pluginName,$pluginFile));
                     wpphLog('Plugin deactivated.', array('plugin file'=>$pluginFile));
                 }
             }
         }
         // more by bulk
-        elseif(isset($_GET['activate-multi']) && ($_POST['action']=='deactivate-selected' || $_POST['action2']=='deactivate-selected'))
+        elseif(isset($_GET['deactivate-multi']) && (isset($_POST['action']) && $_POST['action']=='deactivate-selected' || (isset($_POST['action2']) && $_POST['action2']=='deactivate-selected')))
         {
             if(! empty($_POST['checked']))
             {
+                wpphLog('------------------------------- 3 ------------------------------');
                 foreach($_POST['checked'] as $k=>$pluginFile){
                     $pluginData = get_plugin_data(WP_PLUGIN_DIR.'/'.$pluginFile,false,false);
                     $pluginName = $pluginData['Name'];
-                    self::_addLogEvent(5002,$current_user->ID, WPPHUtil::getIP(), array($pluginName,$pluginFile));
+                    self::_addLogEvent(5002, $userID, $userIP, array($pluginName,$pluginFile));
                     wpphLog('Plugin deactivated.', array('plugin file'=>$pluginFile));
                 }
             }
         }
     }
+
     // # 5000
     static function watchPluginInstall()
     {
         if(defined('WPPH_PLUGIN_INSTALLED_OK')){ return; }
         if(empty($_GET)) { return; }
 
-        /**
-         * @internal
-         * @param $pluginName
-         */
-        function wpph_installPlugin($pluginName)
-        {
-            if(! empty($_GET['plugin']))
-            {
-                // get info for the currently logged in user
-                $current_user = wp_get_current_user();
-                WPPHEvent::_addLogEvent(5000,$current_user->ID, WPPHUtil::getIP(), array($pluginName));
-                wpphLog('Plugin installed.', array('plugin'=>$pluginName));
-            }
-        }
-
         if(isset($_GET['action']) && $_GET['action']=='install-plugin'){
             wpphLog(__METHOD__.'() triggered by hook.');
-            wpph_installPlugin($_GET['plugin']);
+            wpph_installPlugin($_GET['plugin'], wp_get_current_user()->ID, WPPHUtil::getIP());
         }
         elseif(isset($_GET['action2']) && $_GET['action2']=='install-plugin'){
             wpphLog(__METHOD__.'() triggered by hook.');
-            wpph_installPlugin($_GET['plugin']);
+            wpph_installPlugin($_GET['plugin'], wp_get_current_user()->ID, WPPHUtil::getIP());
         }
     }
     // # 5003
@@ -981,6 +1135,8 @@ class WPPHEventWatcher extends WPPHEvent
     // # 5004
     static function watchPluginUpgrade()
     {
+        wpphLog(__METHOD__.'() triggered.');
+
         $current_user = wp_get_current_user();
         $userID = $current_user->ID;
         $ip = WPPHUtil::getIP();
@@ -1043,6 +1199,7 @@ class WPPHEventWatcher extends WPPHEvent
         wpphLog(__METHOD__.'. POST STATUS DATA', array(
             '$oldStatus' => $oldStatus,
             '$newStatus' => $newStatus,
+            '$postStatus' => $post->post_status,
             '$post' => $post
         ));
 
@@ -1064,7 +1221,7 @@ class WPPHEventWatcher extends WPPHEvent
         $postUrl = get_permalink($postID);
         $postStatus = $post->post_status;
         $currentUserID  = wp_get_current_user()->ID;
-        $userID = $postAuthorID = $post->post_author;
+        $userID = $postAuthorID = (int)$post->post_author;
         if($currentUserID != $postAuthorID){
             // someone else is doing this
             $userID = $currentUserID;
@@ -1099,7 +1256,6 @@ class WPPHEventWatcher extends WPPHEvent
 
         WPPHPost::$currentPostType = $post->post_type;
 
-
         global $wpdb;
 
         //## 2025 & 2026 & 2040
@@ -1120,20 +1276,20 @@ class WPPHEventWatcher extends WPPHEvent
         $authorChanged = false;
         if(isset($GLOBALS['WPPH_POST_AUTHOR_UPDATED_ID']))
         {
+            $quickFormEnabled = isset($GLOBALS['WPPH_SCREEN_EDITOR_ENABLED']) ? true : false;
             if($customPostType){
-                if(WPPHPost::postAuthorChanged((int)$GLOBALS['WPPH_POST_AUTHOR_UPDATED_ID'], $postID, $userID, $postTitle, 2038)){
-                    unset($GLOBALS['WPPH_POST_AUTHOR_UPDATED_ID']);
+                if(WPPHPost::postAuthorChanged((int)$GLOBALS['WPPH_POST_AUTHOR_UPDATED_ID'], $postID, $userID, $postTitle, 2038, $quickFormEnabled)){
                     $GLOBALS['WPPH_POST_AUTHOR_UPDATED'] = true;
                     $authorChanged = true;
                 }
             }
             else {
-                if(WPPHPost::postAuthorChanged((int)$GLOBALS['WPPH_POST_AUTHOR_UPDATED_ID'], $postID, $userID, $postTitle, ($postTypePost) ? 2019 : 2020)){
-                    unset($GLOBALS['WPPH_POST_AUTHOR_UPDATED_ID']);
+                if(WPPHPost::postAuthorChanged((int)$GLOBALS['WPPH_POST_AUTHOR_UPDATED_ID'], $postID, $userID, $postTitle, ($postTypePost) ? 2019 : 2020, $quickFormEnabled)){
                     $GLOBALS['WPPH_POST_AUTHOR_UPDATED'] = true;
                     $authorChanged = true;
                 }
             }
+            unset($GLOBALS['WPPH_POST_AUTHOR_UPDATED_ID']);
         }
 
         // 2000 & 2004 & 2029
@@ -1230,8 +1386,8 @@ class WPPHEventWatcher extends WPPHEvent
         {
             $event = 0;
             if($customPostType) { $event = 2039;}
-            elseif($postTypePost) { $event = 2001; }
-            elseif($postTypePage) { $event = 2005; }
+            elseif($postTypePost) { $event = 2021; }
+            elseif($postTypePage) { $event = 2022; }
             if(! empty($event)){
                 WPPHPost::postStatusChanged($postTitle, __('Published'), __('Draft'), $userID, $event);
             }
@@ -1587,17 +1743,14 @@ class WPPHEventWatcher extends WPPHEvent
         wpphLog(__METHOD__.'() triggered.');
         $data = (isset($GLOBALS['WPPH_WIDGET_MOVE']) ? $GLOBALS['WPPH_WIDGET_MOVE'] : null);
         if(empty($data)){
-            wpphLog('variable not found: WPPH_WIDGET_MOVE');
+            wpphLog("Global var: WPPH_WIDGET_MOVE not available yet. Nothing to do here.");
             return;
         }
         $from = $data['from'];
         $to = $data['to'];
-
         global $wp_registered_sidebars;
-
         if(preg_match("/^sidebar-/", $from)){ $from = (isset($wp_registered_sidebars[$from]) ? $wp_registered_sidebars[$from]['name'] : $from); }
         if(preg_match("/^sidebar-/", $to)){ $to = (isset($wp_registered_sidebars[$to]) ? $wp_registered_sidebars[$to]['name'] : $to); }
-
         self::_addLogEvent(2045, $data['user'], $data['ip'], array($data['widget'], $from, $to));
     }
 
@@ -1686,7 +1839,7 @@ class WPPHEventWatcher extends WPPHEvent
     //  2025, 2026
     static function watchPostVisibilityChange($oldStatus, $newStatus, $userID, $postTitle, $post, $event)
     {
-        wpphLog(__METHOD__.'() triggered.');
+        wpphLog(__METHOD__.'() triggered.', array('params'=>func_get_args()));
 
         global $wpdb;
 
@@ -1699,12 +1852,15 @@ class WPPHEventWatcher extends WPPHEvent
         // pwd protected -> public
         if($oldStatus == 'publish' && $newStatus == 'publish')
         {
-            // if post is already pwd protected and there is no change, it will still be issued an event: public to pwd protected
-            if(isset($GLOBALS['WPPH_POST_PWD_PROTECTED']) && $GLOBALS['WPPH_POST_PWD_PROTECTED']){
-                $GLOBALS['WPPH_PREVENT_BUBBLE'] = true;
-                wpphLog(__METHOD__.'() No change.');
-                return;
+            if(! WPPH::isMultisite()){
+                // if post is already pwd protected and there is no change, it will still be issued an event: public to pwd protected
+                if(isset($GLOBALS['WPPH_POST_PWD_PROTECTED']) && $GLOBALS['WPPH_POST_PWD_PROTECTED']){
+                    $GLOBALS['WPPH_PREVENT_BUBBLE'] = true;
+                    wpphLog(__METHOD__.'() No change.');
+                    return;
+                }
             }
+
             // pwd protected -> public
             if(empty($crtPostPassword) && !empty($oldPostPassword)){
                 $from = __('Password Protected');
@@ -1752,7 +1908,7 @@ class WPPHEventWatcher extends WPPHEvent
                 }
             }
         }
-
+        wpphLog("Changing post visibility:",array('from'=>$from, 'to'=>$to));
         if(empty($from) || empty($to)){
             return;
         }
@@ -1802,8 +1958,13 @@ class WPPHEventWatcher extends WPPHEvent
     }
 
     static function watchPostCategoriesChange($post, $wpdb, $postTitle, $event)
-    { return true;
+    {
         wpphLog(__METHOD__.'() triggered.');
+
+        if(! wpph_isEventEnabled($event)){
+            wpphLog('Event '.$event.' is not enabled. Ignoring request.');
+            return true;
+        }
 
         if(isset($GLOBALS['WPPH_POST_OLD_CATEGORIES']))
         {
@@ -1815,10 +1976,16 @@ class WPPHEventWatcher extends WPPHEvent
             }
             $categories_2 = array();
             $newCats = $post->post_category;
-            if(empty($newCats[0])){
-                unset($newCats[0]);
+            if(empty($newCats)){
+                wpphLog('No categories found for this post.');
+                return true;
             }
+            wpphLog('$newCats', $newCats);
             foreach($newCats as $catID){
+                if(empty($catID)){
+                    wpphLog('Category is empty: '.$catID);
+                    continue;
+                }
                 $cat = get_category($catID);
                 array_push($categories_2, $cat->name);
             }
@@ -1877,4 +2044,169 @@ class WPPHEventWatcher extends WPPHEvent
         }
         return false;
     }
+
+
+    // 7000 new site added to network
+    static function watchBlogAdded($blog_id, $user_id)
+    {
+        if(empty($blog_id)) { return; }
+        $blogName = WPPHNetwork::getBlogName($blog_id);
+        if(empty($blogName)) { return; }
+        $currentBlogID = WPPHNetwork::getGlobalOption(WPPH_MAIN_SITE_ID_OPTION_NAME, false, true);
+        WPPHEvent::_addLogEvent(7000, wp_get_current_user()->ID, WPPHUtil::getIP(), array($blogName), null, $currentBlogID);
+        wpphLog(__METHOD__.'() triggered by hook. Blog added: '.$blogName.'; user ID = '.$user_id);
+    }
+
+    // 7001 - blog archived
+    static function watchBlogArchived($blog_id)
+    {
+        if(empty($blog_id)) { return; }
+        $blogName = WPPHNetwork::getBlogName($blog_id);
+        if(empty($blogName)) { return; }
+        $currentBlogID = WPPHNetwork::getGlobalOption(WPPH_MAIN_SITE_ID_OPTION_NAME, false, true);
+        WPPHEvent::_addLogEvent(7001, wp_get_current_user()->ID, WPPHUtil::getIP(), array($blogName), null, $currentBlogID);
+        wpphLog(__METHOD__.'() triggered by hook. Blog archived: '.$blogName);
+    }
+
+    // 7002 - blog unarchived
+    static function watchBlogUnarchived($blog_id)
+    {
+        if(empty($blog_id)) { return; }
+        $blogName = WPPHNetwork::getBlogName($blog_id);
+        if(empty($blogName)) { return; }
+        $currentBlogID = WPPHNetwork::getGlobalOption(WPPH_MAIN_SITE_ID_OPTION_NAME, false, true);
+        WPPHEvent::_addLogEvent(7002, wp_get_current_user()->ID, WPPHUtil::getIP(), array($blogName), null, $currentBlogID);
+        wpphLog(__METHOD__.'() triggered by hook. Blog unarchived: '.$blogName);
+    }
+
+    // 7003 - blog activated
+    static function watchBlogActivated($blog_id)
+    {
+        if(empty($blog_id)) { return; }
+        $blogName = WPPHNetwork::getBlogName($blog_id);
+        if(empty($blogName)) { return; }
+        $currentBlogID = WPPHNetwork::getGlobalOption(WPPH_MAIN_SITE_ID_OPTION_NAME, false, true);
+        WPPHEvent::_addLogEvent(7003, wp_get_current_user()->ID, WPPHUtil::getIP(), array($blogName), null, $currentBlogID);
+        wpphLog(__METHOD__.'() triggered by hook. Blog activated: '.$blogName);
+    }
+
+    // 7004 - blog deactivated
+    static function watchBlogDeactivated($blog_id)
+    {
+        if(empty($blog_id)) { return; }
+        $blogName = WPPHNetwork::getBlogName($blog_id);
+        if(empty($blogName)) { return; }
+        $currentBlogID = WPPHNetwork::getGlobalOption(WPPH_MAIN_SITE_ID_OPTION_NAME, false, true);
+        WPPHEvent::_addLogEvent(7004, wp_get_current_user()->ID, WPPHUtil::getIP(), array($blogName), null, $currentBlogID);
+        wpphLog(__METHOD__.'() triggered by hook. Blog deactivated: '.$blogName);
+    }
+
+    // 7005 - blog deleted
+    static function watchBlogDeleted($blog_id)
+    {
+        if(empty($blog_id)) { return; }
+        $blogName = WPPHNetwork::getBlogName($blog_id);
+        if(empty($blogName)) { return; }
+        $currentBlogID = WPPHNetwork::getGlobalOption(WPPH_MAIN_SITE_ID_OPTION_NAME, false, true);
+        WPPHEvent::_addLogEvent(7005, wp_get_current_user()->ID, WPPHUtil::getIP(), array($blogName), null, $currentBlogID);
+        wpphLog(__METHOD__.'() triggered by hook. Blog deleted: ', array('id'=>$blog_id, 'name'=>$blogName));
+    }
+
+    // 4008 && 4009
+    static function watchUserAdminPrivUpdated($userID)
+    {
+        wpphLog(__METHOD__.'() triggered by hook.');
+        wpphLog('POST DATA', $_POST);
+
+        // 4008
+        if(isset($_POST['super_admin']) && !empty($_POST['super_admin']))
+        {
+            $bid = WPPHNetwork::getGlobalOption(WPPH_MAIN_SITE_ID_OPTION_NAME, false, true);
+            $userName = trim($_POST['display_name']);
+            WPPHEvent::_addLogEvent(4008, wp_get_current_user()->ID, WPPHUtil::getIP(), array($userName), null, $bid);
+        }
+        // 4009
+        else {
+            $bid = WPPHNetwork::getGlobalOption(WPPH_MAIN_SITE_ID_OPTION_NAME, false, true);
+            $superAdmins = get_super_admins();
+            $u = new WP_User($userID);
+            $userName = $u->get('user_login');
+            if(! empty($superAdmins)){
+                foreach($superAdmins as $admin){
+                    if($admin == $userName){
+                        WPPHEvent::_addLogEvent(4009, wp_get_current_user()->ID, WPPHUtil::getIP(), array($userName), null, $bid);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    // 4010
+    static function watchUserAddedToBlog($user_id, $role, $blog_id)
+    {
+        wpphLog(__METHOD__.'() triggered with params: ', array(
+                '$user_id' => $user_id,
+                '$role' => $role,
+                '$blog_id' => $blog_id
+            ));
+
+        // current blog id
+        $currentBlogID = WPPHNetwork::getGlobalOption(WPPH_MAIN_SITE_ID_OPTION_NAME, false, true);
+
+        // get current user info
+        $userInfo = WPPHDB::getUserInfo($user_id);
+        $userName = $userInfo['userName'];
+        $siteName = WPPHNetwork::getBlogName($blog_id);
+
+        WPPHEvent::_addLogEvent(4010, wp_get_current_user()->ID, WPPHUtil::getIP(), array($userName, $role, $siteName), null, $currentBlogID);
+        wpphLog('User added to site.');
+    }
+
+    // 4011
+    static function watchUserRemovedFromBlog($user_id)
+    {
+        $blog_id = (isset($_REQUEST['id']) ? $_REQUEST['id'] : 0);
+        wpphLog(__METHOD__.'() triggered with params: ', array(
+                '$user_id' => $user_id,
+                '$blog_id' => $blog_id
+            ));
+
+        $currentBlogID = WPPHNetwork::getGlobalOption(WPPH_MAIN_SITE_ID_OPTION_NAME, false, true);
+
+        // get current user info
+        $userInfo = WPPHDB::getUserInfo($user_id);
+        $userName = $userInfo['userName'];
+        $userRole = $userInfo['userRole'];
+        $siteName = WPPHNetwork::getBlogName($blog_id);
+
+        if(empty($currentBlogID) || empty($userName) || empty($userRole) || empty($siteName)){
+            wpphLog('Cannot trigger the event 4011. One or more required variables are empty.', array(
+                '$currentBlogID' => $currentBlogID,
+                '$userName' => $userName,
+                '$userRole' => $userRole,
+                '$siteName' => $siteName,
+            ));
+            return;
+        }
+
+        WPPHEvent::_addLogEvent(4011, wp_get_current_user()->ID, WPPHUtil::getIP(), array($userName, $userRole, $siteName), null, $currentBlogID);
+        wpphLog('User removed from site.');
+    }
+
+    // 4012
+    static function watchWpmuUserRegister($user_id)
+    {
+        wpphLog(__METHOD__.'() triggered with params: ', array('$user_id' => $user_id));
+
+        $currentBlogID = WPPHNetwork::getGlobalOption(WPPH_MAIN_SITE_ID_OPTION_NAME, false, true);
+        $userInfo = WPPHDB::getUserInfo($user_id);
+        $userName = $userInfo['userName'];
+
+        WPPHEvent::_addLogEvent(4012, wp_get_current_user()->ID, WPPHUtil::getIP(), array($userName), null, $currentBlogID);
+        wpphLog('Created new network user.');
+    }
+
+
+
 }

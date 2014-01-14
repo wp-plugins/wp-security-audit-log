@@ -16,16 +16,16 @@ class WPPHDatabase
     /**
      * @var string
      * @private
-     * Holds the name of the event logs table WITHOUT the db prefix!
+     * Holds the name of the event logs table WITHOUT the db prefix. As of version 0.6 it has been changed to: wordpress_auditlog
      */
-    private static $_eventsLogTableBaseName = '_wordpress_eventlog';
+    private static $_eventsLogTableBaseName = 'wordpress_auditlog'; //old: {prefix}_wordpress_eventlog
 
     /**
      * @var string
      * @private
-     * Holds the name of the events details table WITHOUT the db prefix!
+     * Holds the name of the events details table WITHOUT the db prefix. As of version 0.6 it has been changed to: wordpress_auditlog_events
      */
-    private static $_eventsDetailsTableBaseName = '_wordpress_eventlog_details';
+    private static $_eventsDetailsTableBaseName = 'wordpress_auditlog_events'; //old: {prefix}_wordpress_eventlog_details
 
 
     private static $_tablesCreated = false;
@@ -34,6 +34,41 @@ class WPPHDatabase
 
 
     //================================================================================================================
+
+    // since v0.6
+    static function dropTables()
+    {
+        $version = WPPHNetwork::getGlobalOption(WPPH_PLUGIN_VERSION_OPTION_NAME, false, true, null);
+        if(is_null($version)){
+            return;
+        }
+        if(version_compare($version,'0.6','>=')){
+            return;
+        }
+
+        global $wpdb;
+        if(self::tableExists($wpdb, self::getFullTableName('MAIN')) && self::tableExists($wpdb, self::getFullTableName('EVENTS'))){
+            return;
+        }
+
+        WPPHNetwork::updateGlobalOption(WPPH_PLUGIN_DB_UPDATED, 0, false, true);
+        $prefix = (WPPH::isMultisite() ? self::getDefaultPrefix() : $wpdb->prefix);
+
+        $tMainOld = $prefix.'_wordpress_eventlog';
+        $tEventsOld = $prefix.'_wordpress_eventlog_details';
+
+        if(self::tableExists($wpdb, $tMainOld)){
+            $q = "DROP TABLE IF EXISTS {$tMainOld}";
+            $r = $wpdb->query($q);
+            wpphLog("Old table {$tMainOld} found. Deleting table.", array('query'=>$q, 'result'=> $r===true?'success':'failed'));
+        }
+        if(self::tableExists($wpdb, $tEventsOld)){
+            $q = "DROP TABLE IF EXISTS {$tEventsOld}";
+            $r = $wpdb->query($q);
+            wpphLog("Old table {$tEventsOld} found. Deleting table.", array('query'=>$q, 'result'=> $r===true?'success':'failed'));
+        }
+    }
+
 
     static function handleDatabase()
     {
@@ -106,10 +141,10 @@ class WPPHDatabase
     {
         global $wpdb;
         if(strcasecmp($what, 'MAIN') == 0){
-            return $wpdb->prefix.self::$_eventsLogTableBaseName;
+            return (WPPH::isMultisite() ? self::getDefaultPrefix() : $wpdb->prefix) . self::$_eventsLogTableBaseName;
         }
         elseif(strcasecmp($what, 'EVENTS') == 0){
-            return $wpdb->prefix.self::$_eventsDetailsTableBaseName;
+            return (WPPH::isMultisite() ? self::getDefaultPrefix() : $wpdb->prefix) . self::$_eventsDetailsTableBaseName;
         }
         return '';
     }
@@ -150,7 +185,6 @@ class WPPHDatabase
 
         return self::$_canUpgrade;
     }
-
 
     private static function _createEventLogsTable($wpdb, $tableFullName)
     {
@@ -194,6 +228,19 @@ class WPPHDatabase
                 return false;
             }
             $q = "ALTER TABLE $tableFullName ADD COLUMN `UserName` VARCHAR(125) NOT NULL DEFAULT ''  AFTER `EventCount`;";
+            $result = @$wpdb->query($q);
+            if($result === false){
+                WPPH::__addPluginError(
+                    sprintf(__("Plugin could not be properly installed. The db user used to connect to the WordPress database is missing the <strong>ALTER</strong> right for query: <strong>%s</strong>",WPPH_PLUGIN_TEXT_DOMAIN),$q)
+                );
+                return false;
+            }
+        }
+        $q = "SHOW COLUMNS FROM $tableFullName LIKE 'BlogId';";
+        $rowData = $wpdb->get_row($q, ARRAY_A);
+        if(empty($rowData['Field']))
+        {
+            $q = "ALTER TABLE $tableFullName ADD COLUMN `BlogId` INT NOT NULL DEFAULT 1  AFTER `UserName`;";
             $result = @$wpdb->query($q);
             if($result === false){
                 WPPH::__addPluginError(
@@ -265,6 +312,17 @@ class WPPHDatabase
     {
         return true;
     }
+
+    /**
+     * Retrieve the default database prefix
+     * @since v0.6
+     * @uses global var $wpdb
+     * @return string
+     */
+    static function getDefaultPrefix(){
+        global $wpdb;
+        return $wpdb->base_prefix;
+    }
 }
 
 /**
@@ -287,6 +345,12 @@ class WPPHDB extends WPPHDatabase
     // returns array(userName, userRole)
     static function getUserInfo($userID)
     {
+        if(empty($userID)){
+            wpphLog(__METHOD__.'() called with an invalid argument $userID. Ignoring request.', array('$userID'=>$userID));
+            return array('userName'=>'', 'userRole'=>'');
+        }
+        wpphLog(__METHOD__.'() called.', array('$userID'=>$userID));
+
         global $wpdb;
 
         $t = $wpdb->users;
@@ -294,6 +358,8 @@ class WPPHDB extends WPPHDatabase
         $username = $wpdb->get_var("SELECT user_login FROM $t WHERE ID=$userID");
         $user = new WP_User( $userID );
         $userRole = (empty($user->roles[0]) ? '' : $user->roles[0]);
+
+        wpphLog("Function: ".__METHOD__." User info", array('id'=>$userID, 'roles'=>$user->roles));
 
         return array(
             'userName' => $username,
@@ -303,11 +369,17 @@ class WPPHDB extends WPPHDatabase
 
     /**
      * Retrieve the total number of events from db
+     * @param integer $blogId
      * @return int
      */
-    static function getEventsCount()
+    static function getEventsCount($blogId = 1)
     {
         global $wpdb;
+        $where  = '';
+        if(!empty($blogId)){
+            $where = " WHERE BlogId = ".intval($blogId);
+            return $wpdb->get_var("SELECT COUNT(EventNumber) FROM ".self::getFullTableName('main').$where);
+        }
         return $wpdb->get_var("SELECT COUNT(EventNumber) FROM ".self::getFullTableName('main'));
     }
 }
