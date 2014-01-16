@@ -53,7 +53,8 @@ class WPPHPost
     // 2019 & 2020 & 2038
     static function postAuthorChanged($newAuthorID, $postID, $userID, $postTitle, $event, $quickFormEnabled = false)
     {
-        wpphLog(__METHOD__.'() triggered.',array('params'=> func_get_args()));
+        $args = func_get_args();
+        wpphLog(__METHOD__.'() triggered.',array('params'=> $args));
         if(empty($postID)){
             wpphLog('Error: $postID is empty. Invalid function call.');
             return false;

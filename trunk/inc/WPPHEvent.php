@@ -1839,7 +1839,8 @@ class WPPHEventWatcher extends WPPHEvent
     //  2025, 2026
     static function watchPostVisibilityChange($oldStatus, $newStatus, $userID, $postTitle, $post, $event)
     {
-        wpphLog(__METHOD__.'() triggered.', array('params'=>func_get_args()));
+        $args = func_get_args();
+        wpphLog(__METHOD__.'() triggered.', array('params'=>$args));
 
         global $wpdb;
 
