@@ -8,7 +8,7 @@ function wpphLog($message, $data=null, $function=null,$line=null){ WPPHLogger::w
  */
 class WPPHLogger
 {
-    private static $_debugLoggingEnabled = false;
+    private static $_debugLoggingEnabled = true;
 
     private static $_fileName = 'debug.log';
 
