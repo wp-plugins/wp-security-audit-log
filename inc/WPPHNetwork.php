@@ -84,9 +84,23 @@ class WPPHNetwork
         wpphLog("Plugin successfully uninstalled.");
     }
 
-    static function networkActivate($networkwide=false)
+    static function networkActivate(/*$networkwide=false*/)
     {
         global $wpdb;
+        if (WPPH::isMultisite()) {
+			$old_blog = $wpdb->blogid;
+			$blogids = $wpdb->get_col("SELECT blog_id FROM $wpdb->blogs");
+			foreach ($blogids as $blog_id) {
+				switch_to_blog($blog_id);
+				self::_activate($blog_id);
+			}
+			switch_to_blog($old_blog);
+			update_option('WPPH_NETWORK_INSTALL',1);
+        }else{
+			update_option('WPPH_NETWORK_INSTALL',0);
+			self::_activate($wpdb->blogid);
+		}
+        /*global $wpdb;
         if (WPPH::isMultisite()) {
             // check if it is a network activation - if so, run the activation function for each blog id
             if ($networkwide)
@@ -103,7 +117,7 @@ class WPPHNetwork
             }
         }
         update_option('WPPH_NETWORK_INSTALL',0);
-        self::_activate($wpdb->blogid);
+        self::_activate($wpdb->blogid);*/
     }
 
     static function networkDeactivate($networkwide=false){
@@ -154,29 +168,21 @@ class WPPHNetwork
         if(empty($results)){
             return $out;
         }
-        $basePrefix = WPPHDatabase::getDefaultPrefix();
         foreach($results as $entry){
-            $blogID = $entry['blog_id'];
-            if($blogID == 1){
-                $blogName = $wpdb->get_var("SELECT option_value FROM ".$basePrefix."options WHERE option_name = 'blogname';");
-            }
-            else { $blogName = $wpdb->get_var("SELECT option_value FROM ".$basePrefix.$blogID."_options WHERE option_name = 'blogname';"); }
-            $out[$blogID] = $blogName;
+            $out[$entry['blog_id']] = self::getBlogName($entry['blog_id']);
         }
         return $out;
     }
 
     static function getBlogName($blogID)
     {
-        global $wpdb;
-        $basePrefix = WPPHDatabase::getDefaultPrefix();
-        if(empty($blogID) || (int)$blogID == 1){
-            $table = $wpdb->prefix . 'options';
-        }
-        else { $table = $basePrefix.$blogID.'_options'; }
-        return $wpdb->get_var("SELECT option_value FROM {$table} WHERE option_name = 'blogname';");
+		return self::callOptionFunc('get', $blogID, 'blogname');
     }
 
+	static function getGlobalBlogId(){
+		return 1; // this is the norm
+	}
+	
     /**
      * Retrive the value of a global option
      * @param $optionName
@@ -187,24 +193,7 @@ class WPPHNetwork
      */
     static function getGlobalOption($optionName, $unserialize = false, $isConstant = false, $default = null)
     {
-        global $wpdb;
-        $table = WPPHDatabase::getDefaultPrefix();
-        if($isConstant){
-            $optionName = "'{$optionName}'";
-        }
-        $query = "SELECT option_value FROM {$table}options WHERE option_name = {$optionName}";
-        wpphLog(__METHOD__.'() -> Query executed: '.$query);
-        $result = $wpdb->get_var($query);
-        if(is_null($result)){
-            return $default;
-        }
-        if($unserialize)
-        {
-            if(! is_array($result)){
-                $result = unserialize($result);
-            }
-        }
-        return $result;
+		return self::callOptionFunc('get', self::getGlobalBlogId(), $optionName, $default);
     }
 
     /**
@@ -217,32 +206,27 @@ class WPPHNetwork
      */
     static function updateGlobalOption($optionName, $optionValue, $serialize = false, $isConstant = false)
     {
-        global $wpdb;
-        $table = WPPHDatabase::getDefaultPrefix().'options';
-        if($isConstant){ $optionName = "'{$optionName}'"; }
-        if($serialize){ $optionValue = serialize($optionValue); }
-        $query = "UPDATE $table SET option_value = '$optionValue' WHERE option_name = $optionName";
-        wpphLog(__METHOD__.'() -> Executing query: '.$query);
-        $result = $wpdb->query($query);
-        return (is_null($result) ? false : true);
+		return self::callOptionFunc('update', self::getGlobalBlogId(), $optionName, $optionValue);
     }
 
     static function addGlobalOption($optionName, $optionValue, $serialize = false, $isConstant = false)
     {
-        $r = self::getGlobalOption($optionName, $serialize, $isConstant, null);
-        if(! is_null($r)){
-            return true;
-        }
-        global $wpdb;
-        $table = WPPHDatabase::getDefaultPrefix().'options';
-        if($isConstant || is_string($optionName)){ $optionName = "'{$optionName}'"; }
-        if($serialize || is_array($optionValue) || is_object($optionValue)){ $optionValue = "'".serialize($optionValue)."'"; }
-        else {
-            if(is_string($optionValue)){ $optionValue = "'".$optionValue."'"; }
-        }
-        $query = "INSERT INTO $table (option_name, option_value) VALUES ($optionName, $optionValue)";
-        wpphLog(__METHOD__.'() -> Executing query: '.$query);
-        $result = $wpdb->query($query);
-        return (is_null($result) ? false : true);
+		return self::callOptionFunc('add', self::getGlobalBlogId(), $optionName, $optionValue);
     }
+	
+	/**
+	 * Gets, adds or updates a wordpress option.
+	 * @param string $action An action: get, add, update
+	 * @param integer $blogid Blog id, used on multisite only.
+	 * @param mixed Rest of the function arguments.
+	 * @return type
+	 */
+	static function callOptionFunc($action, $blogid){
+		$args = func_get_args();
+		$action = array_shift($args);
+		$musite = function_exists($action.'_blog_option');
+		$fnname = $musite ? "{$action}_blog_option" : "{$action}_option";
+		if(!$musite)$blogid = array_shift($args); // remove blogid when not multisite
+		return call_user_func_array($fnname, $args);
+	}
 }
