@@ -5,7 +5,7 @@ License URI: http://www.gnu.org/licenses/gpl.html
 Tags: wordpress security plugin, wordpress security audit log, audit log, event log wordpress, wordpress user tracking, wordpress activity log, wordpress audit, security event log, audit trail, security audit trail, wordpress security alerts, wordpress monitor, wordpress security monitor, wordpress admin, wordpress admin monitoring, wordpress security monitor, analytics, activity, admin, multisite, wordpress multisite
 Requires at least: 3.0
 Tested up to: 3.8.1
-Stable tag: 0.6.2
+Stable tag: 0.6.3
 
 Identify WordPress issues before they become a security problem by keeping an audit log of users and all of the under the hood WordPress activity.
 
