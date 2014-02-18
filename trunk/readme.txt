@@ -96,6 +96,10 @@ Yes, WP Security Audit Log works on WordPress Multisite networkds. For more info
 
 == Changelog ==
 
+= 0.6.3 (2014-02-18) =
+* Bug Fix
+  * Disabled debugging by default (left enabled by mistake)
+
 = 0.6.2 (2014-02-03) =
 * Bug Fix
   * Fixed a number of database issues introduced with the WordPress Multisite Support
