@@ -102,7 +102,7 @@ Yes, WP Security Audit Log works on WordPress Multisite networks, i.e. it can mo
 
 == Changelog ==
 
-= 1.0 (2014-05-15) =
+= 1.0 (2014-05-20) =
 * Complete plugin rewrite making the new version more stable and scalable
 
 * New Features
