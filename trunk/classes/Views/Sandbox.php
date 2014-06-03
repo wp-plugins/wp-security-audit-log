@@ -8,7 +8,7 @@ class WSAL_Views_Sandbox extends WSAL_AbstractView {
 	}
 	
 	public function GetTitle() {
-		return 'Sandbox';
+		return __('Sandbox', 'wp-security-audit-log');
 	}
 	
 	public function GetIcon() {
@@ -16,7 +16,7 @@ class WSAL_Views_Sandbox extends WSAL_AbstractView {
 	}
 	
 	public function GetName() {
-		return 'Sandbox';
+		return __('Sandbox', 'wp-security-audit-log');
 	}
 	
 	public function GetWeight() {
@@ -152,7 +152,7 @@ class WSAL_Views_Sandbox extends WSAL_AbstractView {
 				<?php $code = json_encode(admin_url('admin.php?page=wsal-sandbox') . '&snippet='); ?>
 				<select id="sandbox-snippet" onchange="location = <?php echo esc_attr($code); ?> + encodeURIComponent(this.value);"><?php
 					foreach(array_keys($this->snippets) as $name){
-						?><option value="<?php echo esc_attr($name); ?>"<?php if($name == $snpt)echo ' selected="selected"'; ?>><?php _e($name); ?></option><?php
+						?><option value="<?php echo esc_attr($name); ?>"<?php if($name == $snpt)echo ' selected="selected"'; ?>><?php _e($name, 'wp-security-audit-log'); ?></option><?php
 					}
 				?></select>
 			</label>

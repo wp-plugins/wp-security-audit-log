@@ -9,7 +9,10 @@ class WSAL_Sensors_LogInOut extends WSAL_AbstractSensor {
 	}
 	
 	public function EventLogin($user_login, $user){
-		$this->plugin->alerts->Trigger(1000, array('Username' => $user_login));
+		$this->plugin->alerts->Trigger(1000, array(
+			'Username' => $user_login,
+			'CurrentUserRoles' => $user->roles,
+		));
 	}
 	
 	public function EventLogout(){
@@ -18,13 +21,17 @@ class WSAL_Sensors_LogInOut extends WSAL_AbstractSensor {
 	
 	public function EventLoginFailure($username){
 		list($y, $m, $d) = explode('-', date('Y-m-d'));
+		
+		$tt1 = new WSAL_DB_Occurrence();
+		$tt2 = new WSAL_DB_Meta();
+		
 		$occ = WSAL_DB_Occurrence::LoadMultiQuery('
-			SELECT * FROM `wp_wsal_occurrences` 
+			SELECT * FROM `' . $tt1->GetTable() . '`
 			WHERE alert_id = %d AND site_id = %d
 				AND (created_on BETWEEN %d AND %d)
 				AND id IN (
 					SELECT occurrence_id as id
-					FROM wp_wsal_metadata
+					FROM `' . $tt2->GetTable() . '`
 					WHERE (name = "ClientIP" AND value = %s)
 					   OR (name = "Username" AND value = %s)
 					GROUP BY occurrence_id
@@ -38,6 +45,7 @@ class WSAL_Sensors_LogInOut extends WSAL_AbstractSensor {
 			json_encode(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''),
 			json_encode($username),
 		));
+		
 		$occ = count($occ) ? $occ[0] : null;
 		
 		if($occ && $occ->IsLoaded()){
