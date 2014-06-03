@@ -1,11 +1,13 @@
 === WP Security Audit Log ===
 Contributors: WPWhiteSecurity, uuf6429
+Donate link: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=payments%40wpwhitesecurity%2ecom&lc=US&item_name=WP%20Security%20Audit%20Log%20WordPress%20Plugin&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted
+Plugin URI: http://www.wpwhitesecurity.com/wordpress-security-plugins/wp-security-audit-log/
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
-Tags: wordpress security plugin, wordpress security audit log, audit log, event log wordpress, wordpress user tracking, wordpress activity log, wordpress audit, security event log, audit trail, security audit trail, wordpress security alerts, wordpress monitor, wordpress security monitor, wordpress admin, wordpress admin monitoring, analytics, activity, admin, multisite, wordpress multisite
+Tags: wordpress security plugin, wordpress security audit log, audit log, wordpress log, event log wordpress, wordpress user tracking, wordpress activity log, wordpress audit, security event log, audit trail, security audit trail, wordpress security alerts, wordpress monitor, wordpress security monitor, wordpress admin, wordpress admin monitoring, analytics, activity, admin, multisite, wordpress multisite
 Requires at least: 3.6
 Tested up to: 3.9.1
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 
 Identify WordPress issues before they become a security problem by keeping an audit log of users and all of the under the hood WordPress activity.
 
@@ -60,6 +62,28 @@ Plugins and themes customizations are most probably the norm of the day on large
 
 With WP Security Audit Log now it is easier than ever before to monitor your plugins', theme's and other code behaviour, it will generate a alert when a PHP error, warning, exception or shutdown is detected. It is also possible to log all HTTP GET and POST requests that are reaching your WordPress installation to a log file with WP Security Audit Log. Simply enable the PHP Errors monitoring or logging from the plugins settings.
 
+= Other Noteworthy Features =
+WP Security Audit Log plugin also has a number of features that make WordPress and WordPress multisite monitoring and auditing easier, such as:
+
+* Limit who can view the security alerts by users or roles
+* Limit who can manage the plugin by users or roles
+* Configurable WordPress dashboard widget highlighting the most recent critical activity
+* Configure WordPress security alerts purging by time or by number of alerts
+* User role is reported in alerts for a complete overview of what is happening
+* User avatar is reported in the alerts for better recognizability
+* Enable or disable any security alerts so they are not logged
+* And much more...
+
+* From where WordPress users are logging in
+* Users who created. modified or deleted categories
+* Users who created a blog post, page or a custom post
+* Users who published a blog post, page or a custom post
+* Users who modified published WordPress content such as custom posts, pages or a blog posts
+* Users who moves content such as blog posts or WordPress pages to trash or permanently deletes it
+* Users who modify WordPress widgets
+* Uses who upload or delete any sort of files
+* and much more...
+
 = WordPress Security Tips & Tricks =
 Even if WordPress security is not your cup of tea, the security of your WordPress is your responsibility. Keep yourself up to date with the latest WordPress Security Tips & Tricks. WP White Security frequently publishes WordPress security tips & tricks on the [WordPress Security section](http://www.wpwhitesecurity.com/wordpress-security/) of their blog.
 
@@ -104,6 +128,20 @@ Yes, WP Security Audit Log works on WordPress Multisite networks, i.e. it can mo
 
 == Changelog ==
 
+= 1.1.0 (2014-05-27) =
+* New Features
+  * User avatar is shown in the alert to allow administrators to easily recognize users and their activity	
+  * Clickable username in alerts allow administrators to access user's profile instantly
+  * User role is reported in alert so administrators can easily track any suspicious behaviour
+  * PHP Version checker; upon installation the plugin will check what version of PHP is installed on the system
+    
+* New WordPress Security Alert for monitoring plugin files
+  * Alert 2051: User changed a plugin file using the plugin editor (note: filename and location will also be reported in the alert)
+ 
+* Bug fixes
+  * Fixed wrapping problem in alerts dashboard widget
+  * Fixed upgrade script to properly create the new tables in the WordPress database
+  
 = 1.0 (2014-05-20) =
 * Complete plugin rewrite making the new version more stable and scalable
 

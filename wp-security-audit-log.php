@@ -4,7 +4,8 @@ Plugin Name: WP Security Audit Log
 Plugin URI: http://www.wpwhitesecurity.com/wordpress-security-plugins/wp-security-audit-log/
 Description: Identify WordPress security issues before they become a problem and keep track of everything happening on your WordPress, including WordPress users activity. Similar to Windows Event Log and Linux Syslog, WP Security Audit Log will generate a security alert for everything that happens on your WordPress blog or website. Use the Audit Log Viewer included in the plugin to see all the security alerts.
 Author: WP White Security
-Version: 1.0.0
+Version: 1.1.0
+Text Domain: wp-security-audit-log
 Author URI: http://www.wpwhitesecurity.com/
 License: GPL2
 
@@ -30,6 +31,8 @@ class WpSecurityAuditLog {
 	// <editor-fold desc="Properties & Constants">
 	
 	const PLG_CLS_PRFX = 'WSAL_';
+	
+	const MIN_PHP_VERSION = '5.3.0';
 	
 	/**
 	 * Views supervisor.
@@ -85,6 +88,7 @@ class WpSecurityAuditLog {
 	 * Initialize plugin.
 	 */
 	public function __construct(){
+		// register autoloader
 		spl_autoload_register(array($this, 'LoadClass'));
 		
 		// load dependencies
@@ -101,28 +105,45 @@ class WpSecurityAuditLog {
 		// listen for installation event
 		register_activation_hook(__FILE__, array($this, 'Install'));
 		
+		// makes sure everything is ready
+		add_action('init', array($this, 'CheckInstall'));
+		
 		// listen for cleanup event
 		add_action('wsal_cleanup', array($this, 'CleanUp'));
-		//add_action('init', array($this, 'CleanUp'));
+		
+		// internationalize plugin
+		add_action('plugins_loaded', array($this, 'LoadPluginTextdomain'));
 	}
 	
-	public function CleanUp(){
-		foreach($this->_cleanup_hooks as $hook)
-			call_user_func($hook);
-	}
-	
-	public function AddCleanupHook($hook){
-		$this->_cleanup_hooks[] = $hook;
-	}
-	
-	public function RemoveCleanupHook($hook){
-		while(($pos = array_search($hook, $this->_cleanup_hooks)) !== false)
-			unset($this->_cleanup_hooks[$pos]);
+	public function CheckInstall(){
+		// upgrade/update as necesary
+		if(!$this->IsInstalled()){
+			WSAL_DB_ActiveRecord::InstallAll();
+			if ($this->CanUpgrade()) $this->Upgrade();
+		}else{
+			$this->Update();
+		}
 	}
 	
 	public function Install(){
-		WSAL_DB_ActiveRecord::InstallAll();
-		if($this->CanUpgrade())$this->Upgrade();
+		if (version_compare(PHP_VERSION, self::MIN_PHP_VERSION) < 0) {
+			?><html>
+				<head>
+					<link rel="stylesheet" href="<?php
+						echo esc_attr($this->GetBaseUrl() . '/css/install-error.css?v=' . filemtime($this->GetBaseDir() . '/css/install-error.css'));
+					?>" type="text/css" media="all"/>
+				</head><body>
+					<div class="warn-wrap">
+						<div class="warn-icon-tri"></div><div class="warn-icon-chr">!</div><div class="warn-icon-cir"></div>
+						<?php echo sprintf(__('You are using a version of PHP that is older than %s, which is no longer supported.<br/>Contact us on <a href="mailto:plugins@wpwhitesecurity.com">plugins@wpwhitesecurity.com</a> to help you switch the version of PHP you are using.'), self::MIN_PHP_VERSION); ?>
+					</div>
+				</body>
+			</html><?php
+			die(1);
+		}
+		
+		$this->CheckInstall();
+		
 		wp_schedule_event(0, 'hourly', 'wsal_cleanup');
 	}
 	
@@ -131,10 +152,8 @@ class WpSecurityAuditLog {
 		wp_unschedule_event(0, 'wsal_cleanup');
 	}
 	
-	public function CanUpgrade(){
-		global $wpdb;
-		$table = $wpdb->base_prefix . 'wordpress_auditlog_events';
-		return $wpdb->get_var('SHOW TABLES LIKE "'.$table.'"') == $table;
+	public function Update(){
+		
 	}
 	
 	public function Upgrade(){
@@ -193,19 +212,9 @@ class WpSecurityAuditLog {
 		$this->settings->SetWidgetsEnabled(!!$s->showDW);
 	}
 	
-	public function GetBaseUrl(){
-		return plugins_url('', __FILE__);
-	}
-	
-	public function GetBaseDir(){
-		return plugin_dir_path(__FILE__);
-	}
-	
-	public function GetBaseName(){
-		return plugin_basename(__FILE__);
-	}
-	
 	// </editor-fold>
+	
+	// <editor-fold desc="Utility Methods">
 	
 	/**
 	 * This is the class autoloader. You should not call this directly.
@@ -238,6 +247,57 @@ class WpSecurityAuditLog {
 			substr($file, 0, -4)
 		);
 	}
+	
+	/**
+	 * @return boolean Whether we are running on multisite or not.
+	 */
+	public function IsMultisite(){
+		return funciton_exists('is_multisite') && is_multisite();
+	}
+	
+	public function CleanUp(){
+		foreach($this->_cleanup_hooks as $hook)
+			call_user_func($hook);
+	}
+	
+	public function LoadPluginTextdomain(){
+		load_plugin_textdomain('wp-security-audit-log', false, $this->GetBaseDir() . 'languages/');
+	}
+	
+	public function AddCleanupHook($hook){
+		$this->_cleanup_hooks[] = $hook;
+	}
+	
+	public function RemoveCleanupHook($hook){
+		while(($pos = array_search($hook, $this->_cleanup_hooks)) !== false)
+			unset($this->_cleanup_hooks[$pos]);
+	}
+	
+	public function IsInstalled(){
+		global $wpdb;
+		$table = $wpdb->base_prefix . 'wsal_occurrences';
+		return ($wpdb->get_var('SHOW TABLES LIKE "'.$table.'"') == $table);
+	}
+	
+	public function CanUpgrade(){
+		global $wpdb;
+		$table = $wpdb->base_prefix . 'wordpress_auditlog_events';
+		return ($wpdb->get_var('SHOW TABLES LIKE "'.$table.'"') == $table);
+	}
+	
+	public function GetBaseUrl(){
+		return plugins_url('', __FILE__);
+	}
+	
+	public function GetBaseDir(){
+		return plugin_dir_path(__FILE__);
+	}
+	
+	public function GetBaseName(){
+		return plugin_basename(__FILE__);
+	}
+	
+	// </editor-fold>
 }
 
 // Load extra files

@@ -17,7 +17,7 @@ class WSAL_Views_AuditLog extends WSAL_AbstractView {
 	}
 	
 	public function GetTitle() {
-		return 'Audit Log Viewer';
+		return __('Audit Log Viewer', 'wp-security-audit-log');
 	}
 	
 	public function GetIcon() {
@@ -27,7 +27,7 @@ class WSAL_Views_AuditLog extends WSAL_AbstractView {
 	}
 	
 	public function GetName() {
-		return 'Audit Log Viewer';
+		return __('Audit Log Viewer', 'wp-security-audit-log');
 	}
 	
 	public function GetWeight(){
@@ -36,7 +36,7 @@ class WSAL_Views_AuditLog extends WSAL_AbstractView {
 	
 	public function Render(){
 		if(!$this->_plugin->settings->CurrentUserCan('view')){
-			wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
+			wp_die( __( 'You do not have sufficient permissions to access this page.' , 'wp-security-audit-log') );
 		}
 		
 		?><form id="audit-log-viewer" method="post">
@@ -51,7 +51,7 @@ class WSAL_Views_AuditLog extends WSAL_AbstractView {
 				WsalAuditLogInit(<?php echo json_encode(array(
 					'ajaxurl' => admin_url('admin-ajax.php'),
 					'tr8n' => array(
-						'numofitems' => __('Please enter the number of alerts you would like to see on one page:'),
+						'numofitems' => __('Please enter the number of alerts you would like to see on one page:', 'wp-security-audit-log'),
 					),
 					'autorefresh' => array(
 						'enabled' => $this->_plugin->settings->IsRefreshAlertsEnabled(),
@@ -155,19 +155,19 @@ class WSAL_Views_AuditLogList_Internal extends WP_List_Table {
 	}
 
 	public function no_items(){
-		_e('No events so far.');
+		_e('No events so far.', 'wp-security-audit-log');
 	}
 	
 	public function extra_tablenav($which){
 		// items-per-page widget
-		$o = __('Other');
+		$o = __('Other', 'wp-security-audit-log');
 		$p = $this->_plugin->settings->GetViewPerPage();
 		$items = array($o, 5, 10, 15, 30, 50);
 		if (!in_array($p, $items)) $items[] = $p;
 		if ($p == $o || $p == 0) $p = $o[1]; // a sane default if things goes bust
 		
 		?><div class="wsal-ipp wsal-ipp-<?php echo $which; ?>">
-			<?php _e('Show '); ?>
+			<?php _e('Show ', 'wp-security-audit-log'); ?>
 			<select class="wsal-ipps" onfocus="WsalIppsFocus(value);" onchange="WsalIppsChange(value);">
 				<?php foreach($items as $item){ ?>
 					<option
@@ -177,7 +177,7 @@ class WSAL_Views_AuditLogList_Internal extends WP_List_Table {
 					?></option>
 				<?php } ?>
 			</select>
-			<?php _e(' Items'); ?>
+			<?php _e(' Items', 'wp-security-audit-log'); ?>
 		</div><?php
 		
 		// show site alerts widget
@@ -187,7 +187,7 @@ class WSAL_Views_AuditLogList_Internal extends WP_List_Table {
 			$sites = wp_get_sites();
 			?><div class="wsal-ssa wsal-ssa-<?php echo $which; ?>">
 				<select class="wsal-ssas" onchange="WsalSsasChange(value);">
-					<option value="0"><?php _e('All Sites'); ?></option>
+					<option value="0"><?php _e('All Sites', 'wp-security-audit-log'); ?></option>
 					<?php foreach($sites as $site){ ?>
 						<?php $info = get_blog_details($site['blog_id'], true); ?>
 						<option
@@ -256,11 +256,21 @@ class WSAL_Views_AuditLogList_Internal extends WP_List_Table {
 			case 'crtd':
 				return $item->created_on ? date('Y-m-d h:i:s A', $item->created_on) : '<i>unknown</i>';
 			case 'user':
-				$user = $item->GetUsername();
-				$usid = get_userdatabylogin($user ? $user : 0);
-				$usid = $usid ? $usid->ID : 0;
-				$uimg = get_avatar($usid, 96);
-				return !is_null($user) ? esc_html($user) : '<i>unknown</i>';
+				$username = $item->GetUsername();
+				if($username && ($user = get_userdatabylogin($username))){
+					$image = get_avatar($user->ID, 32);
+					$uhtml = '<a href="' . admin_url('user-edit.php?user_id=' . $user->ID)
+							. '" target="_blank">' . esc_html($user->display_name) . '</a>';
+					$roles = $item->GetUserRoles();
+					$roles = (is_array($roles) && count($roles))
+							? esc_html(ucwords(implode(', ', $roles)))
+							: '<i>' . __('Unknown', 'wp-security-audit-log') . '</i>';
+				}else{
+					$image = get_avatar(0, 32);
+					$uhtml = '<i>' . __('Unknown', 'wp-security-audit-log') . '</i>';
+					$roles = '<i>' . __('System', 'wp-security-audit-log') . '</i>';
+				}
+				return $image . $uhtml . '<br/>' . $roles;
 			case 'scip':
 				return !is_null($item->GetSourceIP()) ? esc_html($item->GetSourceIP()) : '<i>unknown</i>';
 			case 'site':
@@ -271,7 +281,7 @@ class WSAL_Views_AuditLogList_Internal extends WP_List_Table {
 				return '<div id="Event' . $item->id . '">' . $item->GetMessage(array($this, 'meta_formatter')) . '</div>';
 			case 'data':
 				$url = admin_url('admin-ajax.php') . '?action=AjaxInspector&amp;occurrence=' . $item->id;
-				return '<a class="more-info thickbox" title="Alert Data Inspector"'
+				return '<a class="more-info thickbox" title="' . __('Alert Data Inspector', 'wp-security-audit-log') . '"'
 					. ' href="' . $url . '&amp;TB_iframe=true&amp;width=600&amp;height=550">&hellip;</a>';
 			default:
 				return isset($item->$column_name)
@@ -361,7 +371,7 @@ class WSAL_Views_AuditLogList_Internal extends WP_List_Table {
 		
 		$bid = (int)$this->get_view_site_id();
 		$sql = ($bid ? "site_id=$bid" : '1') . ' ORDER BY created_on DESC';
-		$data = WSAL_DB_Occurrence::LoadMulti($sql);
+		$data = WSAL_DB_Occurrence::LoadMulti($sql, array());
 		
 		if(count($data)){
 			$this->_orderby = (!empty($_REQUEST['orderby']) && isset($sortable[$_REQUEST['orderby']])) ? $_REQUEST['orderby'] : 'created_on';
