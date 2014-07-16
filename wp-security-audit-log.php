@@ -4,7 +4,7 @@ Plugin Name: WP Security Audit Log
 Plugin URI: http://www.wpwhitesecurity.com/wordpress-security-plugins/wp-security-audit-log/
 Description: Identify WordPress security issues before they become a problem and keep track of everything happening on your WordPress, including WordPress users activity. Similar to Windows Event Log and Linux Syslog, WP Security Audit Log will generate a security alert for everything that happens on your WordPress blog or website. Use the Audit Log Viewer included in the plugin to see all the security alerts.
 Author: WP White Security
-Version: 1.2.1
+Version: 1.2.2
 Text Domain: wp-security-audit-log
 Author URI: http://www.wpwhitesecurity.com/
 License: GPL2
@@ -105,15 +105,21 @@ class WpSecurityAuditLog {
 		// listen for cleanup event
 		add_action('wsal_cleanup', array($this, 'CleanUp'));
 		
-		// internationalize plugin
-		add_action('plugins_loaded', array($this, 'LoadPluginTextdomain'));
-		
 		// hide plugin
 		if($this->settings->IsIncognito())
 			add_action('admin_head', array($this, 'HidePlugin'));
-		
-		// clean up if need be
-		$this->CleanUp();
+	}
+	
+	/**
+	 * Load the rest of the system.
+	 * @internal
+	 */
+	public function Load(){
+		// load translations
+		load_plugin_textdomain('wp-security-audit-log', false, basename( dirname( __FILE__ ) ) . '/languages/');
+
+		// tell the world we've just finished loading
+		do_action('wsal_init', $this);
 	}
 	
 	public function Install(){
@@ -160,7 +166,6 @@ class WpSecurityAuditLog {
 		$auditlog = $wpdb->get_results($sql, ARRAY_A);
 		
 		// migrate using db logger
-		$lgr = new WSAL_Loggers_Database($this);
 		foreach($auditlog as $entry){
 			$data = array(
 				'ClientIP' => $entry['UserIP'],
@@ -184,7 +189,9 @@ class WpSecurityAuditLog {
 			foreach((array)$temp as $i => $item)
 				$data['MigratedArg' . $i] = $item;
 			// send event data to logger!
-			$lgr->Log($type, $data, $date, $entry['BlogId'], true);
+			foreach($this->alerts->GetLoggers() as $logger){
+				$logger->Log($type, $data, $date, $entry['BlogId'], true);
+			}
 		}
 		
 		// migrate settings
@@ -253,10 +260,6 @@ class WpSecurityAuditLog {
 			call_user_func($hook);
 	}
 	
-	public function LoadPluginTextdomain(){
-		load_plugin_textdomain('wp-security-audit-log', false, $this->GetBaseDir() . 'languages/');
-	}
-	
 	public function AddCleanupHook($hook){
 		$this->_cleanup_hooks[] = $hook;
 	}
@@ -278,20 +281,31 @@ class WpSecurityAuditLog {
 		return ($wpdb->get_var('SHOW TABLES LIKE "'.$table.'"') == $table);
 	}
 	
+	/**
+	 * @return string Absolute URL to plugin directory WITHOUT final slash.
+	 */
 	public function GetBaseUrl(){
 		return plugins_url('', __FILE__);
 	}
 	
+	/**
+	 * @return string Full path to plugin directory WITH final slash.
+	 */
 	public function GetBaseDir(){
 		return plugin_dir_path(__FILE__);
 	}
 	
+	/**
+	 * @return string Plugin directory name.
+	 */
 	public function GetBaseName(){
 		return plugin_basename(__FILE__);
 	}
 	
 	// </editor-fold>
 }
+
+add_action('plugins_loaded', array(WpSecurityAuditLog::GetInstance(), 'Load'));
 
 // Load extra files
 require_once('defaults.php');
