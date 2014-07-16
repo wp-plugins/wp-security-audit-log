@@ -23,12 +23,34 @@ final class WSAL_AlertManager {
 	 */
 	public function __construct(WpSecurityAuditLog $plugin){
 		$this->plugin = $plugin;
-		foreach(glob(dirname(__FILE__) . '/Loggers/*.php') as $file){
-			$class = $plugin->GetClassFileClassName($file);
-			$this->_loggers[] = new $class($plugin);
-		}
+		foreach(glob(dirname(__FILE__) . '/Loggers/*.php') as $file)
+			$this->AddFromFile ($file);
 		
 		add_action('shutdown', array($this, '_CommitPipeline'));
+	}
+	
+	/**
+	 * Add new logger from file inside autoloader path.
+	 * @param string $file Path to file.
+	 */
+	public function AddFromFile($file){
+		$this->AddFromClass($this->plugin->GetClassFileClassName($file));
+	}
+	
+	/**
+	 * Add new logger given class name.
+	 * @param string $class Class name.
+	 */
+	public function AddFromClass($class){
+		$this->AddInstance(new $class($this->plugin));
+	}
+	
+	/**
+	 * Add newly created logger to list.
+	 * @param WSAL_AbstractLogger $logger The new logger.
+	 */
+	public function AddInstance(WSAL_AbstractLogger $logger){
+		$this->_loggers[] = $logger;
 	}
 	
 	/**
@@ -69,7 +91,6 @@ final class WSAL_AlertManager {
 			'cond' => $cond,
 		);
 	}
-	
 	
 	/**
 	 * @internal Commit an alert now.
@@ -174,6 +195,13 @@ final class WSAL_AlertManager {
 	}
 	
 	/**
+	 * @return WSAL_AbstractLogger[] Returns an array of loaded loggers.
+	 */
+	public function GetLoggers(){
+		return $this->_loggers;
+	}
+	
+	/**
 	 * Converts an Alert into a Log entry (by invoking loggers).
 	 * You should not call this method directly.
 	 * @param integer $type Alert type.
@@ -188,6 +216,11 @@ final class WSAL_AlertManager {
 			$data['CurrentUserID'] = function_exists('get_current_user_id') ? get_current_user_id() : 0;
 		if(!isset($data['CurrentUserRoles']) && function_exists('is_user_logged_in') && is_user_logged_in())
 			$data['CurrentUserRoles'] = wp_get_current_user()->roles;
+		
+		//if(isset($_SERVER['REMOTE_HOST']) && $_SERVER['REMOTE_HOST'] != $data['ClientIP'])
+		//	$data['ClientHost'] = $_SERVER['REMOTE_HOST'];
+		
+		//$data['OtherIPs'] = $_SERVER['REMOTE_HOST'];
 		
 		foreach($this->_loggers as $logger)
 			$logger->Log($type, $data);
