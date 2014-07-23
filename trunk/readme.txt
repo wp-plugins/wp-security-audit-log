@@ -7,7 +7,7 @@ License URI: http://www.gnu.org/licenses/gpl.html
 Tags: wordpress security plugin, wordpress security audit log, audit log, wordpress log, event log wordpress, wordpress user tracking, wordpress activity log, wordpress audit, security event log, audit trail, security audit trail, wordpress security alerts, wordpress monitor, wordpress security monitor, wordpress admin, wordpress admin monitoring, analytics, activity, admin, multisite, wordpress multisite
 Requires at least: 3.6
 Tested up to: 3.9.1
-Stable tag: 1.2.2
+Stable tag: 1.2.3
 
 Identify WordPress issues before they become a security problem by keeping an audit log of users and all of the under the hood WordPress activity.
 
@@ -61,9 +61,9 @@ We need help translating the plugin and the WordPress Security Events. If you're
 * German translation by [Mourad Louha](http://excel-translator.de)
 
 = WordPress & PHP Errors Monitoring Tools =
-Plugins and themes customizations are most probably the norm of the day on large WordPress websites, not to mention the installation of new plugins and components. Unforunately sometimes such changes create problems and it is not always easy and possible to setup real live scenarios and replicate specific problems or bugs.
+Plugins and themes customizations are most probably the norm of the day on large WordPress websites, not to mention the installation of new plugins and components. With WP Security Audit Log now it is easier than ever before to monitor your plugins', theme's and other code behaviour, it will generate a alert when a PHP error, warning, exception or shutdown is detected. It is also possible to log all HTTP GET and POST requests that are reaching your WordPress installation to a log file with WP Security Audit Log. Simply enable the PHP Errors monitoring or logging from the plugins settings.
 
-With WP Security Audit Log now it is easier than ever before to monitor your plugins', theme's and other code behaviour, it will generate a alert when a PHP error, warning, exception or shutdown is detected. It is also possible to log all HTTP GET and POST requests that are reaching your WordPress installation to a log file with WP Security Audit Log. Simply enable the PHP Errors monitoring or logging from the plugins settings.
+NOTE: Developer options should NEVER be enabled on Live websites. They should only be enabled on testing, staging and development WordPress and WordPress multisite installations.
 
 = Other Noteworthy Features =
 WP Security Audit Log plugin also has a number of features that make WordPress and WordPress multisite monitoring and auditing easier, such as:
@@ -139,38 +139,45 @@ Yes, WP Security Audit Log works on WordPress Multisite networks, i.e. it can mo
 
 == Changelog ==
 
-= 1.2.2 (2014-07-16) =
-* New Features
-	* Italian translation available thanks to [Leonardo Musumeci](http://leonardomusumeci.net/)
-	
+= 1.2.3 (2014-07-23) =
 * Improvements
-	* Added a warning to developer options
-	* "Hidden" developer options from default settings. User has to click link to access developer plugins
+	* Improved database structure for better support of high-traffic WordPress and WordPress multisite installations
+	* Developer options are reset during updates for improved performance
+	* Added a warning / note to the developer options (such options should NEVER be enabled on live websites but only on testing, staging and development websites)
 	
 * Bug Fixes
-	* Solved several issues related to translations. Now everything in the plugin is translatable
-	* Fixed several other issues reported by email
+  * Fixed database issue with primary key constraint
 
-* Bug Fix
-	* Fixed reported issue with ugrade (more info [here](http://wordpress.org/support/topic/errors-showing-since-120-upgrade-on-multisite-install?replies=4))
+= 1.2.2 (2014-07-16) =
+* New Features
+  * Italian translation available thanks to [Leonardo Musumeci](http://leonardomusumeci.net/)
+	
+* Improvements
+  * Added a warning to developer options
+  * "Hidden" developer options from default settings; user has to click link to access developer settings
+  * Backtrace logging now made optional from a developer setting
+	
+* Bug Fixes
+  * Solved several issues related to translations. Now everything in the plugin is translatable
+  * Fixed several other issues reported by email
 
 = 1.2.1 (2014-07-2) =
 * Bug Fix
-	* Fixed reported issue with ugrade (more info [here](http://wordpress.org/support/topic/errors-showing-since-120-upgrade-on-multisite-install?replies=4))
+  * Fixed reported issue with upgrade (more info [here](http://wordpress.org/support/topic/errors-showing-since-120-upgrade-on-multisite-install?replies=4))
 
 = 1.2.0 (2014-07-2) =
 * New Features
-	* Unlimited Alerts can be stored (removed the 5000 alerts limit)
-	* Alert time now includes milliseconds for more precision (ideal for auditing and compliance)
-	* Reported alert time is now relative to user's configured timezone
-	* Alerts automatic pruning procedures can now be enabled / disabled
-	* Option to hide WP Security Audit Log from plugins page in WordPress
-	* If there are more than 15 websites in a multisite installation, an auto complete site search box is shown instead of the drop down menu
+  * Unlimited Alerts can be stored (removed the 5000 alerts limit)
+  * Alert time now includes milliseconds for more precision (ideal for auditing and compliance)
+  * Reported alert time is now relative to user's configured timezone
+  * Alerts automatic pruning procedures can now be enabled / disabled
+  * Option to hide WP Security Audit Log from Plugins page in WordPress
+  * If there are more than 15 websites in a multisite installation, an auto complete site search box is shown instead of the drop down menu
 
 * New WordPress Security Alerts
-	* Alert 5007: User has uninstalled / deleted a theme
-	* Alert 5008: Super administrator network activated a theme on multisite
-	* Alert 5009: Super administrator network deactivated a theme on multisite
+  * Alert 5007: User has uninstalled / deleted a theme
+  * Alert 5008: Super administrator network activated a theme on multisite
+  * Alert 5009: Super administrator network deactivated a theme on multisite
 
 = 1.1.0 (2014-05-27) =
 * New Features
