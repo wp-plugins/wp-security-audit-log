@@ -1,0 +1,320 @@
+<?php if(! WPPH::canRun()){ return; } ?>
+<?php
+if(! WPPH::ready())
+{
+    $errors = WPPH::getPluginErrors();
+    foreach($errors as $error) {
+        wpph_adminNotice($error);
+    }
+    echo '<div id="wpph-pageWrapper" class="wrap">';
+    echo '<p>'.__('We have encountered some errors during the installation of the plugin which you can find above.',WPPH_PLUGIN_TEXT_DOMAIN).'</p>';
+    echo '<p>'.__('Please try to correct them and then reactivate the plugin.',WPPH_PLUGIN_TEXT_DOMAIN).'</p>';
+    echo '</div>';
+    return;
+}
+?>
+<?php
+// defaults
+$opt = WPPH::getPluginSettings();
+$daysInput = 0;
+$eventsNumber = 0;
+$validationMessage = array();
+$hasErrors = false;
+$showDW = (empty($opt->showDW) ? false : true);
+// active delete option for events
+if(!empty($opt->daysToKeep)){ $daysInput = $opt->daysToKeep; $activeOption = 1; }
+if(! empty($opt->eventsToKeep)){ $eventsNumber = $opt->eventsToKeep; $activeOption = 2; }
+// end defaults
+
+$rm = strtoupper($_SERVER['REQUEST_METHOD']);
+if('POST' == $rm)
+{
+    // Check nonce
+    if(isset($_POST['wpph_update_settings_field_nonce'])){
+        if(!wp_verify_nonce($_POST['wpph_update_settings_field_nonce'],'wpph_update_settings')){
+            wp_die('Invalid request');
+        }
+    }
+    else {wp_die('Invalid request');}
+
+    // method to use
+    if(! isset($_POST['deleteEventsBy'])){ wp_die('Invalid request'); }
+    // value to use
+    if(! isset($_POST['deleteEventsValue'])){ wp_die('Invalid request'); }
+    $deleteEventsBy = intval($_POST['deleteEventsBy']);
+    $deleteEventsValue = intval($_POST['deleteEventsValue']);
+
+    // if Delete events older than ... days
+    if($deleteEventsBy == 1)
+    {
+        $activeOption = 1;
+        $daysInput = $deleteEventsValue;
+
+        // Validate
+        if(!preg_match('/^\d+$/',$deleteEventsValue)){
+            $validationMessage['error'] = __('Incorrect number of days. Please specify a value between 1 and 365.',WPPH_PLUGIN_TEXT_DOMAIN);
+            $hasErrors = true;
+        }
+        elseif($deleteEventsValue < 1 || $deleteEventsValue > 365){
+            $validationMessage['error'] = __('Incorrect number of days. Please specify a value between 1 and 365.',WPPH_PLUGIN_TEXT_DOMAIN);
+            $hasErrors = true;
+        }
+        else {
+            if(! $hasErrors){
+                // reset events number
+                if(isset($opt->eventsToKeep)){
+                    $opt->eventsToKeep = 0;
+                }
+                $opt->daysToKeep = $deleteEventsValue;
+            }
+        }
+    }
+    elseif($deleteEventsBy == 2)
+    {
+        $activeOption = 2;
+        $eventsNumber = $deleteEventsValue;
+
+        // Validate
+        if(!preg_match('/^\d+$/',$deleteEventsValue)){
+            $validationMessage['error'] = sprintf(__('Incorrect number of events. Please specify a value between 1 and %d.',WPPH_PLUGIN_TEXT_DOMAIN), WPPH_KEEP_MAX_EVENTS);
+            $hasErrors = true;
+        }
+        elseif($deleteEventsValue < 1 || $deleteEventsValue > WPPH_KEEP_MAX_EVENTS){
+            $validationMessage['error'] = sprintf(__('Incorrect number of events. Please specify a value between 1 and %d.',WPPH_PLUGIN_TEXT_DOMAIN), WPPH_KEEP_MAX_EVENTS);
+            $hasErrors = true;
+        }
+        else {
+            // reset days
+            if(isset($opt->daysToKeep)){
+                $opt->daysToKeep = 0;
+            }
+            $opt->eventsToKeep = $deleteEventsValue;
+        }
+    }
+
+    // dashboard widget
+    if(isset($_POST['optionDW'])){
+        $showDW = intval($_POST['optionDW']);
+    }
+
+    // save options
+    if(!$hasErrors)
+    {
+        $opt->showDW = (empty($showDW) ? 0 : 1);
+        $opt->cleanupRan = 0;
+        WPPH::updatePluginSettings($opt,null,null,true);
+        $validationMessage['success'] = __('Your settings have been saved.',WPPH_PLUGIN_TEXT_DOMAIN);
+    }
+}
+// end $post
+?>
+<div id="wpph-pageWrapper" class="wrap">
+    <h2 class="pageTitle pageTitle-settings"><?php echo __('WP Security Audit Log Settings',WPPH_PLUGIN_TEXT_DOMAIN);?></h2>
+
+    <?php if(! empty($validationMessage)) : ?>
+        <?php
+            if(!empty($validationMessage['error'])){ wpph_adminNotice($validationMessage['error']); }
+            else { wpph_adminUpdate($validationMessage['success']); }
+        ?>
+    <?php else : ?>
+        <div id="errMessage" style="display: none;"></div>
+    <?php endif;?>
+
+    <div style="margin: 20px 0;">
+        <form id="updateSettingsForm" method="post">
+            <?php wp_nonce_field('wpph_update_settings','wpph_update_settings_field_nonce'); ?>
+            <div id="eventsDeletion">
+                <div id="section-holder">
+                    <table cellspacing="0" cellpadding="0" class="form-table">
+                        <tbody>
+                            <tr valign="top">
+                                <td rowspan="4" class="section-left">
+                                    <label style="display:block;margin: 30px 0 0 0;"><?php echo __('Security Alerts Pruning',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="section-right">
+                                    <p>
+                                        <input type="radio" id="option1" class="radioInput" style="margin-top: 2px;"/>
+                                        <label for="option1"><?php echo __('Delete alerts older than',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
+                                        <input type="text" id="daysInput" maxlength="3"
+                                               placeholder="<?php echo __('(1 to 365)',WPPH_PLUGIN_TEXT_DOMAIN);?>"
+                                               value="<?php if(! empty($daysInput)) { echo $daysInput; } ;?>"/>
+                                        <span> <?php echo __('(1 to 365 days)',WPPH_PLUGIN_TEXT_DOMAIN);?></span>
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="section-right">
+                                    <p>
+                                        <?php $wpph_t1 = sprintf(__('(1 to %d alerts)',WPPH_PLUGIN_TEXT_DOMAIN),WPPH_KEEP_MAX_EVENTS); ?>
+                                        <input type="radio" id="option2" class="radioInput" style="margin-top: 2px;"/>
+                                        <label for="option2"><?php echo __('Keep up to',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
+                                        <input type="text" id="eventsNumberInput" maxlength="6"
+                                               placeholder="<?php echo $wpph_t1;?>"
+                                               value="<?php if(! empty($eventsNumber)) { echo $eventsNumber; } ;?>"/>
+                                        <span> <?php echo $wpph_t1;?></span>
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="section-right"><p class="description"><?php echo sprintf(__('By default %s will keep up to %d WordPress Security Events.',WPPH_PLUGIN_TEXT_DOMAIN),WPPH_PLUGIN_NAME, WPPH_KEEP_MAX_EVENTS);?></p></td>
+                            </tr>
+                            <tr><td style="height: 10px;"></td></tr>
+                            <tr>
+                                <td rowspan="2" class="section-left"><label><?php echo __('Security Alerts Dashboard Widget',WPPH_PLUGIN_TEXT_DOMAIN);?></label></td>
+                            </tr>
+                            <tr>
+                                <td class="section-right">
+                                    <input type="radio" id="optionDW_on" class="radioInput" style="margin-top: 2px;"/><label for="optionDW_on" style="padding-top: 5px; padding-left: 3px;"><?php echo __('On',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
+                                    <input type="radio" id="optionDW_off" class="radioInput" style="margin-top: 2px;"/><label for="optionDW_off" style="padding-top: 5px; padding-left: 3px;"><?php echo __('Off',WPPH_PLUGIN_TEXT_DOMAIN);?></label>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <p style="margin-top: 40px;">
+                <input type="submit" id="submitButton" class="button button-primary" value="<?php echo __('Save settings',WPPH_PLUGIN_TEXT_DOMAIN);?>"/>
+            </p>
+            <input type="hidden" id="deleteEventsBy" name="deleteEventsBy" value=""/>
+            <input type="hidden" id="deleteEventsValue" name="deleteEventsValue" value=""/>
+            <input type="hidden" id="optionDW" name="optionDW" value=""/>
+        </form>
+    </div>
+</div>
+<br class="clear"/>
+
+<script type="text/javascript">
+    jQuery(document).ready(function($){
+        var showErrorMessage = function(msg){
+            $('#errMessage').removeClass('updated').addClass('error').html("<p>Error: "+msg+"</p>").show();
+        };
+        var setFocusOn = function($e){
+            $e.focus();
+            $e.select();
+        };
+        var validateDeleteOptions = function(section, $daysInput, $eventsNumberInput)
+        {
+            if(section == 0){
+                showErrorMessage("<?php echo __('Invalid form. Please reload the page and try again.',WPPH_PLUGIN_TEXT_DOMAIN);?>");
+                setFocusOn($daysInput);
+                return false;
+            }
+            // validate fields
+            if(section == 1)
+            {
+                var daysInputVal = $daysInput.val();
+
+                if(daysInputVal.length == 0){
+                    showErrorMessage("<?php echo __('Please input the number of days.',WPPH_PLUGIN_TEXT_DOMAIN);?>");
+                    setFocusOn($daysInput);
+                    return false;
+                }
+                if(daysInputVal == 0){
+                    showErrorMessage("<?php echo __('Please input a number greater than 0.',WPPH_PLUGIN_TEXT_DOMAIN);?>");
+                    setFocusOn($daysInput);
+                    return false;
+                }
+                if(!/^\d+$/.test(daysInputVal)){
+                    showErrorMessage("<?php echo __('Only numbers greater than 0 allowed.',WPPH_PLUGIN_TEXT_DOMAIN);?>");
+                    setFocusOn($daysInput);
+                    return false;
+                }
+                if(daysInputVal > 365){
+                    showErrorMessage("<?php echo __('Incorrect number of days. Please specify a value between 1 and 365.',WPPH_PLUGIN_TEXT_DOMAIN);?>");
+                    setFocusOn($daysInput);
+                    return false;
+                }
+            }
+            else if(section == 2)
+            {
+                var eniVal = $eventsNumberInput.val();
+
+                if(eniVal.length == 0){
+                    showErrorMessage("<?php echo __('Please input the number of alerts.',WPPH_PLUGIN_TEXT_DOMAIN);?>");
+                    setFocusOn($eventsNumberInput);
+                    return false;
+                }
+                if(eniVal == 0){
+                    showErrorMessage("<?php echo __('Please input a number greater than 0.',WPPH_PLUGIN_TEXT_DOMAIN);?>");
+                    setFocusOn($eventsNumberInput);
+                    return false;
+                }
+                if(!/^\d+$/.test(eniVal)){
+                    showErrorMessage("<?php echo __('Only numbers greater than 0 allowed.',WPPH_PLUGIN_TEXT_DOMAIN);?>");
+                    setFocusOn($eventsNumberInput);
+                    return false;
+                }
+                if(eniVal > <?php echo WPPH_KEEP_MAX_EVENTS;?>){
+                    showErrorMessage("<?php echo sprintf(__('Incorrect number of alerts. Please specify a value between 1 and %d.',WPPH_PLUGIN_TEXT_DOMAIN),WPPH_KEEP_MAX_EVENTS);?>");
+                    setFocusOn($eventsNumberInput);
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        var  deb = $('#deleteEventsBy')
+            ,debv = $('#deleteEventsValue')
+            ,option1 = $('#option1')
+            ,option2 = $('#option2')
+            ,daysInput = $('#daysInput')
+            ,eventsNumber = $('#eventsNumberInput')
+            ,showDW = $('#optionDW_on')
+            ,hideDW = $('#optionDW_off');
+        option1.on('click', function(){ option2.removeAttr('checked'); $(this).attr('checked','checked'); setFocusOn(daysInput); });
+        option2.on('click', function(){ option1.removeAttr('checked'); $(this).attr('checked','checked'); setFocusOn(eventsNumber); });
+        daysInput.on('click', function(){ option2.removeAttr('checked'); option1.attr('checked','checked'); });
+        eventsNumber.on('click', function(){ option1.removeAttr('checked'); option2.attr('checked','checked'); });
+        showDW.on('click', function(){ hideDW.removeAttr('checked'); $(this).attr('checked','checked'); setFocusOn($(this)); });
+        hideDW.on('click', function(){ showDW.removeAttr('checked'); $(this).attr('checked','checked'); setFocusOn($(this)); });
+
+        // select delete option
+        <?php if($activeOption == 1):?>
+        option1.attr('checked','checked');
+        eventsNumber.val("");
+        <?php else :?>
+        option2.attr('checked','checked');
+        daysInput.val("");
+        <?php endif; ?>
+
+        //select DW
+        <?php if($showDW):?>
+            showDW.attr('checked','checked');
+        <?php else :?>
+            hideDW.attr('checked','checked');
+        <?php endif;?>
+
+        // form submit
+        $('#submitButton').on('click',function()
+        {
+            var section = 0;
+            if ($('#option1').prop('checked')){section = 1;}
+            else { section = 2; }
+
+            if(section < 1){
+                alert("<?php echo __('Invalid form. Please refresh the page and try again.',WPPH_PLUGIN_TEXT_DOMAIN);?>");
+                return false;
+            }
+            if(! validateDeleteOptions(section, daysInput, eventsNumber)){
+                return false;
+            }
+            // alerts pruning
+            if(section == 1){
+                deb.val(1);
+                debv.val(daysInput.val());
+            }
+            else if(section ==2){
+                deb.val(2);
+                debv.val(eventsNumber.val());
+            }
+            // dashboard widget
+            if(showDW.prop('checked')){
+                $('#optionDW').val('1');
+            }
+            else { $('#optionDW').val('0') }
+            return true;
+        });
+    });
+</script>
