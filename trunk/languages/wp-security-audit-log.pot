@@ -2,9 +2,9 @@
 # This file is distributed under the same license as the WP Security Audit Log package.
 msgid ""
 msgstr ""
-"Project-Id-Version: WP Security Audit Log 1.2.3\n"
+"Project-Id-Version: WP Security Audit Log 1.2.5\n"
 "Report-Msgid-Bugs-To: http://wordpress.org/tag/wp-security-audit-log\n"
-"POT-Creation-Date: 2014-07-23 10:21:20+00:00\n"
+"POT-Creation-Date: 2014-08-12 08:27:38+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -140,8 +140,8 @@ msgstr ""
 msgid "Audit Log Viewer"
 msgstr ""
 
-#: classes/Views/AuditLog.php:40 classes/Views/Settings.php:67
-#: classes/Views/ToggleAlerts.php:29
+#: classes/Views/AuditLog.php:40 classes/Views/Licensing.php:34
+#: classes/Views/Settings.php:68 classes/Views/ToggleAlerts.php:29
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -173,11 +173,11 @@ msgstr ""
 msgid " Items"
 msgstr ""
 
-#: classes/Views/AuditLog.php:273 classes/Views/ToggleAlerts.php:66
+#: classes/Views/AuditLog.php:273 classes/Views/ToggleAlerts.php:69
 msgid "Code"
 msgstr ""
 
-#: classes/Views/AuditLog.php:274 classes/Views/ToggleAlerts.php:67
+#: classes/Views/AuditLog.php:274 classes/Views/ToggleAlerts.php:70
 msgid "Type"
 msgstr ""
 
@@ -328,8 +328,34 @@ msgstr ""
 msgid "WordPress Security Category"
 msgstr ""
 
+#: classes/Views/Licensing.php:6 classes/Views/Licensing.php:14
+msgid "Licensing"
+msgstr ""
+
+#: classes/Views/Licensing.php:39 classes/Views/Settings.php:73
+#: classes/Views/ToggleAlerts.php:44
+msgid "Settings have been saved."
+msgstr ""
+
+#: classes/Views/Licensing.php:41 classes/Views/Settings.php:75
+#: classes/Views/ToggleAlerts.php:46
+msgid "Error: "
+msgstr ""
+
+#: classes/Views/Licensing.php:61
+msgid "Version"
+msgstr ""
+
+#: classes/Views/Licensing.php:71
+msgid "Active"
+msgstr ""
+
+#: classes/Views/Licensing.php:73
+msgid "Inactive"
+msgstr ""
+
 #: classes/Views/Sandbox.php:11 classes/Views/Sandbox.php:19
-#: classes/Views/Settings.php:231
+#: classes/Views/Settings.php:233
 msgid "Sandbox"
 msgstr ""
 
@@ -341,142 +367,134 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: classes/Views/Settings.php:72 classes/Views/ToggleAlerts.php:43
-msgid "Settings have been saved."
-msgstr ""
-
-#: classes/Views/Settings.php:74 classes/Views/ToggleAlerts.php:45
-msgid "Error: "
-msgstr ""
-
-#: classes/Views/Settings.php:84
+#: classes/Views/Settings.php:86
 msgid "Security Alerts Pruning"
 msgstr ""
 
-#: classes/Views/Settings.php:87
+#: classes/Views/Settings.php:89
 msgid "(eg: 1 month)"
 msgstr ""
 
-#: classes/Views/Settings.php:92
+#: classes/Views/Settings.php:94
 msgid "Delete alerts older than"
 msgstr ""
 
-#: classes/Views/Settings.php:104
+#: classes/Views/Settings.php:106
 msgid "(eg: 80)"
 msgstr ""
 
-#: classes/Views/Settings.php:109
+#: classes/Views/Settings.php:111
 msgid "Keep up to"
 msgstr ""
 
-#: classes/Views/Settings.php:113
+#: classes/Views/Settings.php:115
 msgid "alerts"
 msgstr ""
 
-#: classes/Views/Settings.php:119
+#: classes/Views/Settings.php:121
 msgid "Alerts Dashboard Widget"
 msgstr ""
 
-#: classes/Views/Settings.php:125
+#: classes/Views/Settings.php:127
 msgid "On"
 msgstr ""
 
-#: classes/Views/Settings.php:130
+#: classes/Views/Settings.php:132
 msgid "Off"
 msgstr ""
 
-#: classes/Views/Settings.php:135
+#: classes/Views/Settings.php:137
 msgid "Display a dashboard widget with the latest %d security alerts."
 msgstr ""
 
-#: classes/Views/Settings.php:143
+#: classes/Views/Settings.php:145
 msgid "Can View Alerts"
 msgstr ""
 
-#: classes/Views/Settings.php:150
+#: classes/Views/Settings.php:152
 msgid "Users and Roles in this list can view the security alerts"
 msgstr ""
 
-#: classes/Views/Settings.php:165
+#: classes/Views/Settings.php:167
 msgid "Can Manage Plugin"
 msgstr ""
 
-#: classes/Views/Settings.php:172
+#: classes/Views/Settings.php:174
 msgid "Users and Roles in this list can manage the plugin settings"
 msgstr ""
 
-#: classes/Views/Settings.php:187
+#: classes/Views/Settings.php:189
 msgid "Refresh Audit View"
 msgstr ""
 
-#: classes/Views/Settings.php:193
+#: classes/Views/Settings.php:195
 msgid "Automatic"
 msgstr ""
 
-#: classes/Views/Settings.php:195
+#: classes/Views/Settings.php:197
 msgid "Refresh Audit View as soon as there are new events."
 msgstr ""
 
-#: classes/Views/Settings.php:199
+#: classes/Views/Settings.php:201
 msgid "Manual"
 msgstr ""
 
-#: classes/Views/Settings.php:201
+#: classes/Views/Settings.php:203
 msgid "Refresh Audit View only when page is reloaded."
 msgstr ""
 
-#: classes/Views/Settings.php:207
+#: classes/Views/Settings.php:209
 msgid "Developer Options"
 msgstr ""
 
-#: classes/Views/Settings.php:215
+#: classes/Views/Settings.php:217
 msgid ""
-"Enabling any of the settings below may cause unintended side-effects "
-"including degraded performance.<br/>Only enable these options if you know "
-"what you are doing."
+"Only enable these options on testing, staging and development websites. "
+"Enabling any of the settings below on LIVE websites may cause unintended "
+"side-effects including degraded performance."
 msgstr ""
 
-#: classes/Views/Settings.php:219
+#: classes/Views/Settings.php:221
 msgid "Data Inspector"
 msgstr ""
 
-#: classes/Views/Settings.php:220
+#: classes/Views/Settings.php:222
 msgid "View data logged for each triggered alert."
 msgstr ""
 
-#: classes/Views/Settings.php:223
+#: classes/Views/Settings.php:225
 msgid "PHP Errors"
 msgstr ""
 
-#: classes/Views/Settings.php:224
+#: classes/Views/Settings.php:226
 msgid "Enables sensor for alerts generated from PHP."
 msgstr ""
 
-#: classes/Views/Settings.php:227
+#: classes/Views/Settings.php:229
 msgid "Request Log"
 msgstr ""
 
-#: classes/Views/Settings.php:228
+#: classes/Views/Settings.php:230
 msgid "Enables logging request to file."
 msgstr ""
 
-#: classes/Views/Settings.php:232
+#: classes/Views/Settings.php:234
 msgid "Enables sandbox for testing PHP code."
 msgstr ""
 
-#: classes/Views/Settings.php:235
+#: classes/Views/Settings.php:237
 msgid "Backtrace"
 msgstr ""
 
-#: classes/Views/Settings.php:236
+#: classes/Views/Settings.php:238
 msgid "Log full backtrace for PHP-generated alerts."
 msgstr ""
 
-#: classes/Views/Settings.php:254
+#: classes/Views/Settings.php:256
 msgid "Hide Plugin from Plugins Page"
 msgstr ""
 
-#: classes/Views/Settings.php:260
+#: classes/Views/Settings.php:262
 msgid "Hide"
 msgstr ""
 
@@ -484,19 +502,19 @@ msgstr ""
 msgid "Enable/Disable Alerts"
 msgstr ""
 
-#: classes/Views/ToggleAlerts.php:68 classes/WidgetManager.php:38
+#: classes/Views/ToggleAlerts.php:71 classes/WidgetManager.php:38
 msgid "Description"
 msgstr ""
 
-#: classes/Views/ToggleAlerts.php:76
+#: classes/Views/ToggleAlerts.php:79
 msgid "Not Implemented"
 msgstr ""
 
-#: classes/Views/ToggleAlerts.php:79
+#: classes/Views/ToggleAlerts.php:82
 msgid "Not Available"
 msgstr ""
 
-#: classes/Views/ToggleAlerts.php:93
+#: classes/Views/ToggleAlerts.php:96
 msgid "Save Changes"
 msgstr ""
 
@@ -1535,7 +1553,7 @@ msgid ""
 ">get_template_directory%"
 msgstr ""
 
-#: wp-security-audit-log.php:142
+#: wp-security-audit-log.php:149
 msgid ""
 "You are using a version of PHP that is older than %s, which is no longer "
 "supported.<br/>Contact us on <a href=\"mailto:plugins@wpwhitesecurity.com"
