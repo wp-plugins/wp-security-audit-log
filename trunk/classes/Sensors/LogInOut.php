@@ -6,6 +6,13 @@ class WSAL_Sensors_LogInOut extends WSAL_AbstractSensor {
 		add_action('wp_login', array($this, 'EventLogin'), 10, 2);
 		add_action('wp_logout', array($this, 'EventLogout'));
 		add_action('wp_login_failed', array($this, 'EventLoginFailure'));
+		add_action('clear_auth_cookie', array($this, 'GetCurrentUser'), 10);
+	}
+	
+	protected $_current_user = null;
+	
+	public function GetCurrentUser(){
+		$this->_current_user = wp_get_current_user();
 	}
 	
 	public function EventLogin($user_login, $user){
@@ -16,7 +23,10 @@ class WSAL_Sensors_LogInOut extends WSAL_AbstractSensor {
 	}
 	
 	public function EventLogout(){
-		$this->plugin->alerts->Trigger(1001);
+		$this->plugin->alerts->Trigger(1001, array(
+			'CurrentUserID' => $this->_current_user->ID,
+			'CurrentUserRoles' => $this->_current_user->roles,
+		));
 	}
 	
 	const TRANSIENT_FAILEDLOGINS = 'wsal-failedlogins';
@@ -31,7 +41,7 @@ class WSAL_Sensors_LogInOut extends WSAL_AbstractSensor {
 	
 	protected function IsPastLoginFailureLimit($ip){
 		$data = get_transient(self::TRANSIENT_FAILEDLOGINS);
-		return ($data !== false) && ($data[$ip] > ($this->GetLoginFailureLogLimit()));
+		return ($data !== false) && isset($data[$ip]) && ($data[$ip] > $this->GetLoginFailureLogLimit());
 	}
 	
 	protected function IncrementLoginFailure($ip){

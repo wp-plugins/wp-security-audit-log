@@ -39,6 +39,7 @@ class WSAL_Views_Settings extends WSAL_AbstractView {
 	}
 	
 	protected function Save(){
+		check_admin_referer('wsal-settings');
 		$this->_plugin->settings->SetPruningDateEnabled(isset($_REQUEST['PruneByDate']));
 		$this->_plugin->settings->SetPruningDate($_REQUEST['PruningDate']);
 		$this->_plugin->settings->SetPruningLimitEnabled(isset($_REQUEST['PruneByLimit']));
@@ -77,6 +78,7 @@ class WSAL_Views_Settings extends WSAL_AbstractView {
 		?><form id="audit-log-settings" method="post">
 			<input type="hidden" name="page" value="<?php echo esc_attr($_REQUEST['page']); ?>" />
 			<input type="hidden" id="ajaxurl" value="<?php echo esc_attr(admin_url('admin-ajax.php')); ?>" />
+			<?php wp_nonce_field('wsal-settings'); ?>
 			
 			<table class="form-table">
 				<tbody>
@@ -212,7 +214,7 @@ class WSAL_Views_Settings extends WSAL_AbstractView {
 								   onclick="jQuery(this).hide().next().show();">Show Developer Options</a>
 								<div style="<?php if(!$any)echo 'display: none;'; ?>">
 									<p style="border-left: 3px solid #FFD000; padding: 2px 8px; margin-left: 6px; margin-bottom: 16px;"><?php
-										_e('Enabling any of the settings below may cause unintended side-effects including degraded performance.<br/>Only enable these options if you know what you are doing.', 'wp-security-audit-log');
+										_e('Only enable these options on testing, staging and development websites. Enabling any of the settings below on LIVE websites may cause unintended side-effects including degraded performance.', 'wp-security-audit-log');
 									?></p><?php
 									foreach(array(
 										WSAL_Settings::OPT_DEV_DATA_INSPECTOR => array(
