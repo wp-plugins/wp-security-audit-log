@@ -10,6 +10,18 @@ abstract class WSAL_AbstractView {
 	protected $_wpversion;
 	
 	/**
+	 * Contains the result to a call to add_submenu_page().
+	 * @var string
+	 */
+	public $hook_suffix = '';
+	
+	/**
+	 * Tells us whether this view is currently being displayed or not.
+	 * @var boolean
+	 */
+	public $is_active = false;
+	
+	/**
 	 * @param WpSecurityAuditLog $plugin
 	 */
 	public function __construct(WpSecurityAuditLog $plugin){
@@ -71,9 +83,7 @@ abstract class WSAL_AbstractView {
 	 * @return string Safe view menu name.
 	 */
 	public function GetSafeViewName(){
-		$name = $this->GetName();
-		if(function_exists('iconv'))$name = iconv('utf-8', 'ascii//TRANSLIT', $name);
-		return 'wsal-' . strtolower(preg_replace('/[^A-Za-z0-9\-]/', '-', $name));
+		return 'wsal-' . preg_replace('/[^A-Za-z0-9\-]/', '-', $this->GetViewName());
 	}
 	
 	/**
@@ -90,6 +100,13 @@ abstract class WSAL_AbstractView {
 	public function GetUrl(){
 		$fn = function_exists('network_admin_url') ? 'network_admin_url' : 'admin_url';
 		return $fn('admin.php?page=' . $this->GetSafeViewName());
+	}
+	
+	/**
+	 * @return string Generates view name out of class name.
+	 */
+	public function GetViewName(){
+		return strtolower(str_replace(array('WSAL_Views_', 'WSAL_'), '', get_class($this)));
 	}
 	
 }
