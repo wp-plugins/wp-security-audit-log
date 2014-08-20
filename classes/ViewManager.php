@@ -91,7 +91,7 @@ class WSAL_ViewManager {
 		
 		if($this->_plugin->settings->CurrentUserCan('view') && count($this->views)){
 			// add main menu
-			add_menu_page(
+			$this->views[0]->hook_suffix = add_menu_page(
 				'WP Security Audit Log',
 				'Audit Log',
 				'read', // no capability requirement
@@ -103,7 +103,7 @@ class WSAL_ViewManager {
 			// add menu items
 			foreach($this->views as $view){
 				if($view->IsAccessible()){
-					add_submenu_page(
+					$view->hook_suffix = add_submenu_page(
 						$view->IsVisible() ? $this->views[0]->GetSafeViewName() : null,
 						$view->GetTitle(),
 						$view->GetName(),
@@ -139,42 +139,76 @@ class WSAL_ViewManager {
 	}
 	
 	/**
-	 * @return int Returns page id of current page (or 0 on error).
+	 * @return int Returns page id of current page (or false on error).
 	 */
 	protected function GetBackendPageIndex(){
 		if(isset($_REQUEST['page']))
 			foreach($this->views as $i => $view)
 				if($_REQUEST['page'] == $view->GetSafeViewName())
 					return $i;
-		return 0;
+		return false;
+	}
+	
+	/**
+	 *
+	 * @var WSAL_AbstractView|null
+	 */
+	protected $_active_view = false;
+	
+	/**
+	 * @return WSAL_AbstractView|null Returns the current active view or null if none.
+	 */
+	public function GetActiveView(){
+		if($this->_active_view === false){
+			$this->_active_view = null;
+			
+			if(isset($_REQUEST['page']))
+				foreach($this->views as $view)
+					if($_REQUEST['page'] == $view->GetSafeViewName())
+						$this->_active_view = $view;
+			
+			if($this->_active_view)
+				$this->_active_view->is_active = true;
+		}
+		return $this->_active_view;
 	}
 	
 	/**
 	 * Render header of the current view.
 	 */
 	public function RenderViewHeader(){
-		$view_id = $this->GetBackendPageIndex();
-		$this->views[$view_id]->Header();
+		if (!!($view = $this->GetActiveView())) $view->Header();
 	}
 	
 	/**
 	 * Render footer of the current view.
 	 */
 	public function RenderViewFooter(){
-		$view_id = $this->GetBackendPageIndex();
-		$this->views[$view_id]->Footer();
+		if (!!($view = $this->GetActiveView())) $view->Footer();
 	}
 	
 	/**
 	 * Render content of the current view.
 	 */
 	public function RenderViewBody(){
-		$view_id = $this->GetBackendPageIndex();
+		$view = $this->GetActiveView();
 		?><div class="wrap">
 			<div id="icon-plugins" class="icon32"><br></div>
-			<h2><?php _e($this->views[$view_id]->GetTitle(), 'wp-security-audit-log'); ?></h2>
-			<?php $this->views[$view_id]->Render(); ?>
+			<h2><?php echo esc_html($view->GetTitle()); ?></h2>
+			<?php $view->Render(); ?>
 		</div><?php
+	}
+	
+	/**
+	 * Returns view instance corresponding to its class name.
+	 * @param string $className View class name.
+	 * @return WSAL_AbstractView The view or false on failure.
+	 */
+	public function FindByClassName($className){
+		foreach($this->views as $view)
+			if($view instanceof $className)
+				return $view;
+		return false;
 	}
 	
 }
