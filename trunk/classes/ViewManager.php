@@ -97,7 +97,8 @@ class WSAL_ViewManager {
 				'read', // no capability requirement
 				$this->views[0]->GetSafeViewName(),
 				array($this, 'RenderViewBody'),
-				$this->views[0]->GetIcon()
+				$this->views[0]->GetIcon(),
+				'2.5' // right after dashboard
 			);
 
 			// add menu items
@@ -192,11 +193,11 @@ class WSAL_ViewManager {
 	 */
 	public function RenderViewBody(){
 		$view = $this->GetActiveView();
-		?><div class="wrap">
-			<div id="icon-plugins" class="icon32"><br></div>
-			<h2><?php echo esc_html($view->GetTitle()); ?></h2>
-			<?php $view->Render(); ?>
-		</div><?php
+		?><div class="wrap"><?php
+			$view->RenderIcon();
+			$view->RenderTitle();
+			$view->RenderContent();
+		?></div><?php
 	}
 	
 	/**

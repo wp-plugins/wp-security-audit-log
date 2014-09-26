@@ -217,6 +217,14 @@ class WSAL_Settings {
 		return $this->_plugin->GetGlobalOption('pruning-limit-e', true);
 	}
 	
+	public function IsRestrictAdmins(){
+		return $this->_plugin->GetGlobalOption('restrict-admins', false);
+	}
+	
+	public function SetRestrictAdmins($enable){
+		$this->_plugin->SetGlobalOption('restrict-admins', (bool)$enable);
+	}
+	
 	protected $_disabled = null;
 	
 	public function GetDefaultDisabledAlerts(){
@@ -325,41 +333,59 @@ class WSAL_Settings {
 	}
 	
 	/**
-	 * @param integer|WP_user $user User object to check.
-	 * @param string $action Type of action, either 'view' or 'edit'.
-	 * @return boolean If user has access or not.
+	 * Returns access tokens for a particular action.
+	 * @param string $action Type of action.
+	 * @return string[] List of tokens (usernames, roles etc).
 	 */
-	public function UserCan($user, $action){
-		if(is_int($user))$user = get_userdata($user);
+	public function GetAccessTokens($action){
 		$allowed = array();
 		
 		switch($action){
 			case 'view':
 				$allowed = $this->GetAllowedPluginViewers();
 				$allowed = array_merge($allowed, $this->GetAllowedPluginEditors());
-				$allowed = array_merge($allowed, $this->GetSuperAdmins());
-				$allowed = array_merge($allowed, $this->GetAdmins());
+				if (!$this->IsRestrictAdmins()) {
+					$allowed = array_merge($allowed, $this->GetSuperAdmins());
+					$allowed = array_merge($allowed, $this->GetAdmins());
+				}
 				break;
 			case 'edit':
 				$allowed = $this->GetAllowedPluginEditors();
-				$allowed = array_merge($allowed, $this->_plugin->IsMultisite() ?
-						$this->GetSuperAdmins() : $this->GetAdmins()
-					);
+				if (!$this->IsRestrictAdmins()) {
+					$allowed = array_merge($allowed, $this->_plugin->IsMultisite() ?
+							$this->GetSuperAdmins() : $this->GetAdmins()
+						);
+				}
 				break;
 			default:
 				throw new Exception('Unknown action "'.$action.'".');
 		}
 		
+		if (!$this->IsRestrictAdmins()) {
+			if(is_multisite()){
+				$allowed = array_merge($allowed, get_super_admins());
+			}else{
+				$allowed[] = 'administrator';
+			}
+		}
+		
+		return array_unique($allowed);
+	}
+	
+	/**
+	 * @param integer|WP_user $user User object to check.
+	 * @param string $action Type of action, either 'view' or 'edit'.
+	 * @return boolean If user has access or not.
+	 */
+	public function UserCan($user, $action){
+		if(is_int($user))$user = get_userdata($user);
+		
+		$allowed = $this->GetAccessTokens($action);
+		
 		$check = array_merge(
 			$user->roles,
 			array($user->user_login)
 		);
-		
-		if(is_multisite()){
-			$allowed = array_merge($allowed, get_super_admins());
-		}else{
-			$allowed[] = 'administrator';
-		}
 		
 		foreach($check as $item){
 			if(in_array($item, $allowed)){
@@ -368,6 +394,12 @@ class WSAL_Settings {
 		}
 		
 		return false;
+	}
+	
+	public function GetCurrentUserRoles($baseRoles = null){
+		if ($baseRoles == null) $baseRoles = wp_get_current_user()->roles;
+		if (function_exists('is_super_admin') && is_super_admin()) $baseRoles[] = 'superadmin';
+		return $baseRoles;
 	}
 	
 	public function IsIncognito(){
