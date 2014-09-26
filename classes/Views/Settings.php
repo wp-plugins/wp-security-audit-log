@@ -4,7 +4,10 @@ class WSAL_Views_Settings extends WSAL_AbstractView {
 	
 	public function __construct(WpSecurityAuditLog $plugin) {
 		parent::__construct($plugin);
-		add_action('wp_ajax_AjaxCheckSecurityToken', array($this, 'AjaxCheckSecurityToken'));
+		if (is_admin()) {
+			add_action('wp_ajax_AjaxCheckSecurityToken', array($this, 'AjaxCheckSecurityToken'));
+			add_action('wp_ajax_AjaxRunCleanup', array($this, 'AjaxRunCleanup'));
+		}
 	}
 	
 	public function HasPluginShortcutLink(){
@@ -47,6 +50,7 @@ class WSAL_Views_Settings extends WSAL_AbstractView {
 		$this->_plugin->settings->SetWidgetsEnabled($_REQUEST['EnableDashboardWidgets']);
 		$this->_plugin->settings->SetAllowedPluginViewers(isset($_REQUEST['Viewers']) ? $_REQUEST['Viewers'] : array());
 		$this->_plugin->settings->SetAllowedPluginEditors(isset($_REQUEST['Editors']) ? $_REQUEST['Editors'] : array());
+		$this->_plugin->settings->SetRestrictAdmins(isset($_REQUEST['RestrictAdmins']));
 		$this->_plugin->settings->SetRefreshAlertsEnabled($_REQUEST['EnableAuditViewRefresh']);
 		$this->_plugin->settings->SetIncognito(isset($_REQUEST['Incognito']));
 		$this->_plugin->settings->ClearDevOptions();
@@ -61,6 +65,14 @@ class WSAL_Views_Settings extends WSAL_AbstractView {
 		if(!isset($_REQUEST['token']))
 			die('Token parameter expected.');
 		die($this->GetTokenType($_REQUEST['token']));
+	}
+	
+	public function AjaxRunCleanup(){
+		if(!$this->_plugin->settings->CurrentUserCan('view'))
+			die('Access Denied.');
+		$this->_plugin->CleanUp();
+		wp_redirect($this->GetUrl());
+		exit;
 	}
 	
 	public function Render(){
@@ -97,11 +109,6 @@ class WSAL_Views_Settings extends WSAL_AbstractView {
 									   value="<?php echo esc_attr($this->_plugin->settings->GetPruningDate()); ?>"/>
 								<span> <?php echo $text; ?></span>
 							</fieldset>
-						</td>
-					</tr>
-					<tr>
-						<th></th>
-						<td>
 							<fieldset>
 								<?php $text = __('(eg: 80)', 'wp-security-audit-log'); ?>
 								<?php $nbld = $this->_plugin->settings->IsPruningLimitEnabled(); ?>
@@ -115,6 +122,15 @@ class WSAL_Views_Settings extends WSAL_AbstractView {
 								<?php echo __('alerts', 'wp-security-audit-log'); ?>
 								<span><?php echo $text; ?></span>
 							</fieldset>
+							<p class="description"><?php
+								echo __('Next Scheduled Cleanup is in ', 'wp-security-audit-log');
+								echo human_time_diff(current_time('timestamp'), $next = wp_next_scheduled('wsal_cleanup'));
+								echo '<!-- ' . date('dMy H:i:s', $next) . ' --> ';
+								echo sprintf(
+										__('(or %s)', 'wp-security-audit-log'),
+										'<a href="' . admin_url('admin-ajax.php?action=AjaxRunCleanup') . '">' . __('Run Manually', 'wp-security-audit-log') . '</a>'
+									);
+							?></p>
 						</td>
 					</tr>
 					<tr>
@@ -182,6 +198,21 @@ class WSAL_Views_Settings extends WSAL_AbstractView {
 										</span><?php
 									}
 								?></div>
+							</fieldset>
+						</td>
+					</tr>
+					<tr>
+						<th><label for="RestrictAdmins"><?php _e('Restrict Plugin Access', 'wp-security-audit-log'); ?></label></th>
+						<td>
+							<fieldset>
+								<input type="hidden" id="RestrictAdminsDefaultUser" value="<?php echo esc_attr(wp_get_current_user()->user_login); ?>"/>
+								<label for="RestrictAdmins">
+									<?php $ira = $this->_plugin->settings->IsRestrictAdmins(); ?>
+									<input type="checkbox" name="RestrictAdmins" id="RestrictAdmins"<?php if($ira)echo ' checked="checked"'; ?>/>
+									<span class="description">
+										<?php _e('By default all the administrators on this WordPress have access to manage this plugin.<br/>By enabling this option only the users specified in the two options above and your username will have access to view alerts and manage this plugin.', 'wp-security-audit-log'); ?>
+									</span>
+								</label>
 							</fieldset>
 						</td>
 					</tr>

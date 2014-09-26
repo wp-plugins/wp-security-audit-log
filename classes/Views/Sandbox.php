@@ -77,6 +77,12 @@ class DummySiteCreatorTask extends WSAL_AbstractSandboxTask {
 	}
 }
 new DummySiteCreatorTask();',
+		'Get Access Tokens' => '$settings = WpSecurityAuditLog::GetInstance()->settings;
+return array(
+	\'view\' => $settings->GetAccessTokens(\'view\'),
+	\'edit\' => $settings->GetAccessTokens(\'edit\'),
+);',
+		'Show Profiler Results' => 'return array_map(\'strval\', WpSecurityAuditLog::GetInstance()->profiler->GetItems());'
 	);
 	
 	public function HandleError($code, $message, $filename = 'unknown', $lineno = 0){
@@ -192,8 +198,7 @@ new DummySiteCreatorTask();',
 			</div>
 			<label for="sandbox-snippet" style="float: left; line-height: 26px; display: inline-block; margin-right: 32px; border-right: 1px dotted #CCC; padding-right: 32px;">
 				Use Snippet: 
-				<?php $code = json_encode(admin_url('admin.php?page=wsal-sandbox') . '&snippet='); ?>
-				<select id="sandbox-snippet" onchange="location = <?php echo esc_attr($code); ?> + encodeURIComponent(this.value);"><?php
+				<select id="sandbox-snippet" onchange="SandboxUseSnippet(this.value);"><?php
 					foreach(array_keys($this->snippets) as $name){
 						?><option value="<?php echo esc_attr($name); ?>"<?php if($name == $snpt)echo ' selected="selected"'; ?>><?php echo $name; ?></option><?php
 					}
@@ -261,6 +266,12 @@ new DummySiteCreatorTask();',
 				
 				//jQuery('#sandbox').submit();
 			});
+			
+			function SandboxUseSnippet(value){
+				jQuery('#sandbox-submit').attr('disabled', true);
+				location = <?php echo json_encode(admin_url('admin.php?page=wsal-sandbox')); ?>
+					+ '&snippet=' + encodeURIComponent(value);
+			}
 			
 			function SandboxUpdateState(data){
 				var ul = jQuery('<ul/>');

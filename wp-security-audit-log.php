@@ -4,7 +4,7 @@ Plugin Name: WP Security Audit Log
 Plugin URI: http://www.wpwhitesecurity.com/wordpress-security-plugins/wp-security-audit-log/
 Description: Identify WordPress security issues before they become a problem and keep track of everything happening on your WordPress, including WordPress users activity. Similar to Windows Event Log and Linux Syslog, WP Security Audit Log will generate a security alert for everything that happens on your WordPress blog or website. Use the Audit Log Viewer included in the plugin to see all the security alerts.
 Author: WP White Security
-Version: 1.2.6
+Version: 1.2.7
 Text Domain: wp-security-audit-log
 Author URI: http://www.wpwhitesecurity.com/
 License: GPL2
@@ -79,6 +79,12 @@ class WpSecurityAuditLog {
 	public $licensing;
 	
 	/**
+	 * Simple profiler.
+	 * @var WSAL_SimpleProfiler
+	 */
+	public $profiler;
+	
+	/**
 	 * Contains a list of cleanup callbacks.
 	 * @var callable[]
 	 */
@@ -104,6 +110,10 @@ class WpSecurityAuditLog {
 	 * Initialize plugin.
 	 */
 	public function __construct(){
+		// profiler has to be loaded manually
+		require_once('classes/SimpleProfiler.php');
+		$this->profiler = new WSAL_SimpleProfiler();
+		
 		// load autoloader and register base paths
 		require_once('classes/Autoloader.php');
 		$this->autoloader = new WSAL_Autoloader($this);
@@ -138,7 +148,9 @@ class WpSecurityAuditLog {
 		load_plugin_textdomain('wp-security-audit-log', false, basename( dirname( __FILE__ ) ) . '/languages/');
 
 		// tell the world we've just finished loading
+		$s = $this->profiler->Start('WSAL Init Hook');
 		do_action('wsal_init', $this);
+		$s->Stop();
 	}
 	
 	/**
@@ -174,8 +186,9 @@ class WpSecurityAuditLog {
 		// if system wasn't installed, try migration now
 		if (!$PreInstalled && $this->CanMigrate()) $this->Migrate();
 		
-		// install cleanup hook
-		wp_schedule_event(0, 'hourly', 'wsal_cleanup');
+		// install cleanup hook (remove older one if it exists)
+		wp_clear_scheduled_hook('wsal_cleanup');
+		wp_schedule_event(current_time('timestamp') + 600, 'hourly', 'wsal_cleanup');
 	}
 	
 	/**
@@ -201,7 +214,7 @@ class WpSecurityAuditLog {
 	 */
 	public function Uninstall(){
 		WSAL_DB_ActiveRecord::UninstallAll();
-		wp_unschedule_event(0, 'wsal_cleanup');
+		wp_clear_scheduled_hook('wsal_cleanup');
 	}
 	
 	/**
@@ -356,8 +369,10 @@ class WpSecurityAuditLog {
 	 * Run cleanup routines.
 	 */
 	public function CleanUp(){
-		foreach($this->_cleanup_hooks as $hook)
-			call_user_func($hook);
+		$s = $this->profiler->Start('Clean Up');
+		//foreach($this->_cleanup_hooks as $hook)
+		//	call_user_func($hook);
+		$s->Stop();
 	}
 	
 	/**
@@ -417,16 +432,32 @@ class WpSecurityAuditLog {
 		return plugin_basename(__FILE__);
 	}
 	
+	/**
+	 * Load default configuration / data.
+	 */
+	public function LoadDefaults(){
+		$s = $this->profiler->Start('Load Defaults');
+		require_once('defaults.php');
+		$s->Stop();
+	}
+	
 	// </editor-fold>
 }
 
+// Profile WSAL load time
+$s = WpSecurityAuditLog::GetInstance()->profiler->Start('WSAL Init');
+
+// Begin load sequence
 add_action('plugins_loaded', array(WpSecurityAuditLog::GetInstance(), 'Load'));
 
 // Load extra files
-require_once('defaults.php');
+WpSecurityAuditLog::GetInstance()->LoadDefaults();
 
 // Start listening to events
 WpSecurityAuditLog::GetInstance()->sensors->HookEvents();
+
+// End profile snapshot
+$s->Stop();
 
 // Create & Run the plugin
 return WpSecurityAuditLog::GetInstance();

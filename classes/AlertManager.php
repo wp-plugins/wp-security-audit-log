@@ -95,13 +95,17 @@ final class WSAL_AlertManager {
 	/**
 	 * @internal Commit an alert now.
 	 */
-	protected function _CommitItem($type, $data, $cond){
+	protected function _CommitItem($type, $data, $cond, $_retry = true){
 		if(!$cond || !!call_user_func($cond, $this)){
 			if($this->IsEnabled($type)){
 				if(isset($this->_alerts[$type])){
 					// ok, convert alert to a log entry
 					$this->_triggered_types[] = $type;
 					$this->Log($type, $data);
+				}elseif($_retry){
+					// this is the last attempt at loading alerts from default file
+					$this->plugin->LoadDefaults();
+					return $this->_CommitItem($type, $data, $cond, false);
 				}else{
 					// in general this shouldn't happen, but it could, so we handle it here :)
 					throw new Exception('Alert with code "' . $type . '" has not be registered.');
@@ -215,7 +219,7 @@ final class WSAL_AlertManager {
 		if(!isset($data['Username']) && !isset($data['CurrentUserID']))
 			$data['CurrentUserID'] = function_exists('get_current_user_id') ? get_current_user_id() : 0;
 		if(!isset($data['CurrentUserRoles']) && function_exists('is_user_logged_in') && is_user_logged_in())
-			$data['CurrentUserRoles'] = wp_get_current_user()->roles;
+			$data['CurrentUserRoles'] = $this->plugin->settings->GetCurrentUserRoles();
 		
 		//if(isset($_SERVER['REMOTE_HOST']) && $_SERVER['REMOTE_HOST'] != $data['ClientIP'])
 		//	$data['ClientHost'] = $_SERVER['REMOTE_HOST'];
