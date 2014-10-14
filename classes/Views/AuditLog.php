@@ -12,6 +12,24 @@ class WSAL_Views_AuditLog extends WSAL_AbstractView {
 		add_action('wp_ajax_AjaxRefresh', array($this, 'AjaxRefresh'));
 		add_action('wp_ajax_AjaxSetIpp', array($this, 'AjaxSetIpp'));
 		add_action('wp_ajax_AjaxSearchSite', array($this, 'AjaxSearchSite'));
+		add_action('all_admin_notices', array($this, 'AdminNoticesNotificationsExtension'));
+		
+		$this->RegisterNotice('notifications-extension');
+	}
+	
+	public function AdminNoticesNotificationsExtension() {
+		$NotificationExtensionInstalled = $this->_plugin->licensing->IsLicenseValid('wsal-notifications-extension.php');
+		$IsCurrentView = $this->_plugin->views->GetActiveView() == $this;
+		if($IsCurrentView && !$this->IsNoticeDismissed('notifications-extension') && !$NotificationExtensionInstalled){
+			?><div class="updated" data-notice-name="notifications-extension">
+				<p><?php _e('Get notified instantly via email of important changes on your WordPress', 'wp-security-audit-log'); ?></p>
+				<p>
+					<?php $url = 'http://www.wpwhitesecurity.com/plugins-premium-extensions/email-notifications-wordpress/'; ?>
+					<a href="<?php echo esc_attr($url); ?>" target="_blank"><?php _e('Learn More', 'wp-security-audit-log'); ?></a>
+					| <a href="javascript:;" class="wsal-dismiss-notification"><?php _e('Dismiss this notice', 'wp-security-audit-log'); ?></a>
+				</p>
+			</div><?php
+		}
 	}
 	
 	public function HasPluginShortcutLink(){
@@ -51,7 +69,7 @@ class WSAL_Views_AuditLog extends WSAL_AbstractView {
 		?><form id="audit-log-viewer" method="post">
 			<div id="audit-log-viewer-content">
 				<input type="hidden" name="page" value="<?php echo esc_attr($_REQUEST['page']); ?>" />
-				<input type="hidden" id="wsal-cbid" name="wsal-cbid" value="<?php echo esc_attr(isset($_REQUEST['wsal-cbid']) ? $_REQUEST['wsal-cbid'] : ''); ?>" />
+				<input type="hidden" id="wsal-cbid" name="wsal-cbid" value="<?php echo esc_attr(isset($_REQUEST['wsal-cbid']) ? $_REQUEST['wsal-cbid'] : '0'); ?>" />
 				<?php do_action('wsal_auditlog_before_view', $this->GetListView()); ?>
 				<?php $this->GetListView()->display(); ?>
 				<?php do_action('wsal_auditlog_after_view', $this->GetListView()); ?>

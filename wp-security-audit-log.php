@@ -4,7 +4,7 @@ Plugin Name: WP Security Audit Log
 Plugin URI: http://www.wpwhitesecurity.com/wordpress-security-plugins/wp-security-audit-log/
 Description: Identify WordPress security issues before they become a problem and keep track of everything happening on your WordPress, including WordPress users activity. Similar to Windows Event Log and Linux Syslog, WP Security Audit Log will generate a security alert for everything that happens on your WordPress blog or website. Use the Audit Log Viewer included in the plugin to see all the security alerts.
 Author: WP White Security
-Version: 1.2.7
+Version: 1.2.8
 Text Domain: wp-security-audit-log
 Author URI: http://www.wpwhitesecurity.com/
 License: GPL2
@@ -134,14 +134,38 @@ class WpSecurityAuditLog {
 		// listen for cleanup event
 		add_action('wsal_cleanup', array($this, 'CleanUp'));
 		
+		// render wsal header
+		add_action('admin_enqueue_scripts', array($this, 'RenderHeader'));
+		
+		// render wsal footer
+		add_action('admin_footer', array($this, 'RenderFooter'));
+		
 		// hide plugin
 		if($this->settings->IsIncognito())
 			add_action('admin_head', array($this, 'HidePlugin'));
 	}
 	
 	/**
-	 * Load the rest of the system.
-	 * @internal
+	 * @internal Render plugin stuff in page header.
+	 */
+	public function RenderHeader(){
+		// common.css?
+	}
+	
+	/**
+	 * @internal Render plugin stuff in page footer.
+	 */
+	public function RenderFooter(){
+		wp_enqueue_script(
+			'wsal-common',
+			$this->GetBaseUrl() . '/js/common.js',
+			array('jquery'),
+			filemtime($this->GetBaseDir() . '/js/common.js')
+		);
+	}
+	
+	/**
+	 * @internal Load the rest of the system.
 	 */
 	public function Load(){
 		// load translations
@@ -370,8 +394,8 @@ class WpSecurityAuditLog {
 	 */
 	public function CleanUp(){
 		$s = $this->profiler->Start('Clean Up');
-		//foreach($this->_cleanup_hooks as $hook)
-		//	call_user_func($hook);
+		foreach($this->_cleanup_hooks as $hook)
+			call_user_func($hook);
 		$s->Stop();
 	}
 	
