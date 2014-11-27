@@ -24,7 +24,7 @@ final class WSAL_AlertManager {
 	public function __construct(WpSecurityAuditLog $plugin){
 		$this->plugin = $plugin;
 		foreach(glob(dirname(__FILE__) . '/Loggers/*.php') as $file)
-			$this->AddFromFile ($file);
+			$this->AddFromFile($file);
 		
 		add_action('shutdown', array($this, '_CommitPipeline'));
 	}
@@ -51,6 +51,16 @@ final class WSAL_AlertManager {
 	 */
 	public function AddInstance(WSAL_AbstractLogger $logger){
 		$this->_loggers[] = $logger;
+	}
+	
+	/**
+	 * Remove logger by class name.
+	 * @param string $class The class name.
+	 */
+	public function RemoveByClass($class){
+		foreach($this->_loggers as $i => $inst)
+			if(get_class($inst) == $class)
+				unset($this->_loggers[$i]);
 	}
 	
 	/**
