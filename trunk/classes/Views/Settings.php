@@ -52,6 +52,8 @@ class WSAL_Views_Settings extends WSAL_AbstractView {
 		$this->_plugin->settings->SetAllowedPluginEditors(isset($_REQUEST['Editors']) ? $_REQUEST['Editors'] : array());
 		$this->_plugin->settings->SetRestrictAdmins(isset($_REQUEST['RestrictAdmins']));
 		$this->_plugin->settings->SetRefreshAlertsEnabled($_REQUEST['EnableAuditViewRefresh']);
+		$this->_plugin->settings->SetMainIPFromProxy($_REQUEST['EnableProxyIpCapture']);
+		$this->_plugin->settings->SetInternalIPsFiltering($_REQUEST['EnableIpFiltering']);
 		$this->_plugin->settings->SetIncognito(isset($_REQUEST['Incognito']));
 		$this->_plugin->settings->ClearDevOptions();
 		if(isset($_REQUEST['DevOptions']))
@@ -178,6 +180,26 @@ class WSAL_Views_Settings extends WSAL_AbstractView {
 						</td>
 					</tr>
 					<tr>
+						<th><label for="pioption_on"><?php _e('Reverse Proxy / Firewall Options', 'wp-security-audit-log'); ?></label></th>
+						<td>
+							<fieldset>
+								<label for="EnableProxyIpCapture">
+									<input type="checkbox" name="EnableProxyIpCapture" value="1" id="EnableProxyIpCapture"<?php
+										if($this->_plugin->settings->IsMainIPFromProxy())echo ' checked="checked"';
+									?>/> <?php _e('WordPress running behind firewall or proxy', 'wp-security-audit-log'); ?><br/>
+									<span class="description"><?php _e('Enable this option if your WordPress is running behind a firewall or reverse proxy. When this option is enabled the plugin will retrieve the user\'s IP address from the proxy header.', 'wp-security-audit-log'); ?></span>
+								</label>
+								<br/>
+								<label for="EnableIpFiltering">
+									<input type="checkbox" name="EnableIpFiltering" value="1" id="EnableIpFiltering"<?php
+										if($this->_plugin->settings->IsInternalIPsFiltered())echo ' checked="checked"';
+									?>/> <?php _e('Filter Internal IP Addresses', 'wp-security-audit-log'); ?><br/>
+									<span class="description"><?php _e('Enable this option to filter internal IP addresses from the proxy headers.', 'wp-security-audit-log'); ?></span>
+								</label>	
+							</fieldset>
+						</td>
+					</tr>
+					<tr>
 						<th><label for="ViewerQueryBox"><?php _e('Can View Alerts', 'wp-security-audit-log'); ?></label></th>
 						<td>
 							<fieldset>
@@ -279,10 +301,6 @@ class WSAL_Views_Settings extends WSAL_AbstractView {
 										WSAL_Settings::OPT_DEV_REQUEST_LOG    => array(
 											__('Request Log', 'wp-security-audit-log'),
 											__('Enables logging request to file.', 'wp-security-audit-log')
-										),
-										WSAL_Settings::OPT_DEV_SANDBOX_PAGE   => array(
-											__('Sandbox', 'wp-security-audit-log'),
-											__('Enables sandbox for testing PHP code.', 'wp-security-audit-log')
 										),
 										WSAL_Settings::OPT_DEV_BACKTRACE_LOG  => array(
 											__('Backtrace', 'wp-security-audit-log'),
