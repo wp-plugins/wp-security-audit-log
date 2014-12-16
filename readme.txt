@@ -7,7 +7,7 @@ License URI: http://www.gnu.org/licenses/gpl.html
 Tags: wordpress security plugin, wordpress security audit log, audit log, wordpress log, event log wordpress, wordpress user tracking, wordpress activity log, wordpress audit, security event log, audit trail, security audit trail, wordpress security alerts, wordpress monitor, wordpress security monitor, wordpress admin, wordpress admin monitoring, analytics, activity, admin, multisite, wordpress multisite, actions, dashboard, log, notification, wordpress monitoring, email notification, wordpress email alerts, tracking, user tracking, user activity report
 Requires at least: 3.6
 Tested up to: 4.0.1
-Stable tag: 1.3.1
+Stable tag: 1.3.2
 
 Identify WordPress issues before they become a security problem by keeping an audit log of users and all of the under the hood WordPress activity.
 
@@ -93,6 +93,7 @@ NOTE: Developer options should NEVER be enabled on Live websites. They should on
 WP Security Audit Log plugin also has a number of features that make WordPress and WordPress multisite monitoring and auditing easier, such as:
 
 * Realtime Audit Log viewer to watch user activity as it happens without any delays
+* Builtin support for reverse proxies and web application firewalls [more information](http://www.wpwhitesecurity.com/wordpress-plugins/wordpress-user-monitoring-plugin/wp-security-audit-log-plugin-retrieves-originating-wordpress-user-ip-address/]
 * Limit who can view the security alerts by users or roles
 * Limit who can manage the plugin by users or roles
 * Configurable WordPress dashboard widget highlighting the most recent critical activity
@@ -109,15 +110,16 @@ WP Security Audit Log plugin also has a number of features that make WordPress a
 * [Design Wall](http://www.designwall.com/blog/10-wordpress-multisite-plugins-you-shouldnt-live-without/)
 * [WPLift](http://wplift.com/wordpress-event-tracking)
 
-= WordPress Security Tips & Tricks =
-Even if WordPress security is not your cup of tea, the security of your WordPress is your responsibility. Keep yourself up to date with the latest WordPress Security Tips & Tricks. WP White Security frequently publishes WordPress security tips & tricks on the [WordPress Security section](http://www.wpwhitesecurity.com/wordpress-security/) of their blog.
-
-= Further Reading =
+= Related Links and Documentation =
 For more information and to get started with WordPress Security, check out the following:
 
+* [List of WordPress Security Alerts](http://www.wpwhitesecurity.com/wordpress-security-plugins/wp-security-audit-log/security-audit-alerts-logs/)
+* [WordPress Multisite Features](http://www.wpwhitesecurity.com/wordpress-plugins/wordpress-user-monitoring-plugin/wp-security-audit-log-plugin-features-wordpress-multisite/)
+* [WP Security Audit Log and Reverse Proxy and WAFs Support](http://www.wpwhitesecurity.com/wordpress-plugins/wordpress-user-monitoring-plugin/wp-security-audit-log-plugin-retrieves-originating-wordpress-user-ip-address/]
 * [Official WP Security Audit Log Page](http://www.wpwhitesecurity.com/wordpress-security-plugins/wp-security-audit-log/)
-* [List of all WP Security Audit Log Alerts](http://www.wpwhitesecurity.com/wordpress-security-plugins/wp-security-audit-log/security-audit-alerts-logs/)
-* [Recipe for ultimate WordPress Security](http://www.wpwhitesecurity.com/wordpress-security/recipe-ultimate-diy-wordpress-security/)
+
+= WordPress Security Tips & Tricks =
+Even if WordPress security is not your cup of tea, the security of your WordPress is your responsibility. Keep yourself up to date with the latest WordPress Security Tips & Tricks. WP White Security frequently publishes WordPress security tips & tricks on the [WordPress Security section](http://www.wpwhitesecurity.com/wordpress-security/) of their blog.
 
 = Plugin Newsletter =
 To keep yourself updated with what is new and updated in our WordPress security plugins please subscribe to the [WP White Security Plugins Newsletter](http://eepurl.com/Jn9sP).
@@ -162,6 +164,18 @@ Yes it is possible to do so with the premium [WSAL Reporting Extension](http://w
 
 == Changelog ==
 
+= 1.3.2 (2014-12-16) =
+* **New Features and Options**
+	* Plugin automatically retrieves user's originating IP address even if WordPress is installed behind a reverse proxy, web application firewall or load balancer. For more information refer to [WP Security Audit Log, Reverse Proxies and WAFs](http://www.wpwhitesecurity.com/wordpress-plugins/wordpress-user-monitoring-plugin/wp-security-audit-log-plugin-retrieves-originating-wordpress-user-ip-address/)
+	* New option to omit internal IP addresses from being reported in the WordPress security audit log
+	
+* **Removed Functionality**
+	* The sandbox was removed from the plugin. If you need to use the sandbox for troubleshooting and tested contact us since we migrated it to a standalone extension.
+	
+* **Bug Fixes**
+	* Fixed a bug where site administrators where not able to view the WordPress security alerts for their sites in a WordPress multisite installation
+	* Improved some SQL queries as reported in this [support ticket](https://wordpress.org/support/topic/syntax-error-d-not-replaced?replies=10#post-6278773)	
+	
 = 1.3.1 (2014-11-27) =
 * **New WordPress Security Alerts**
 	* Alert 2065: The content of published post has been modified
