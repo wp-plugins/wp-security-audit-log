@@ -7,7 +7,7 @@ License URI: http://www.gnu.org/licenses/gpl.html
 Tags: wordpress security plugin, wordpress security audit log, audit log, wordpress log, event log wordpress, wordpress user tracking, wordpress activity log, wordpress audit, security event log, audit trail, security audit trail, wordpress security alerts, wordpress monitor, wordpress security monitor, wordpress admin, wordpress admin monitoring, analytics, activity, admin, multisite, wordpress multisite, actions, dashboard, log, notification, wordpress monitoring, email notification, wordpress email alerts, tracking, user tracking, user activity report
 Requires at least: 3.6
 Tested up to: 4.1
-Stable tag: 1.3.2
+Stable tag: 1.3.3
 
 Identify WordPress issues before they become security problems - Keep an audit log of all users' changes and other under the hood WordPress activity.
 
@@ -105,6 +105,7 @@ WP Security Audit Log plugin also has a number of features that make WordPress a
 
 * [WP Mayor](http://www.wpmayor.com/wp-security-audit-log-plugin-review-user-activity-logging-wordpress/)
 * [ManageWP Plugins of the month](https://managewp.com/free-wordpress-plugins-june-2014)
+* [Pagely](https://pagely.com/blog/2015/01/log-wordpress-dashboard-activity-improved-security-auditing/)
 * [Design Wall](http://www.designwall.com/blog/10-wordpress-multisite-plugins-you-shouldnt-live-without/)
 * [WPLift](http://wplift.com/wordpress-event-tracking)
 * [BlogVault](https://blogvault.net/wp-security-audit-log-plugin-review/)
@@ -165,6 +166,18 @@ Yes it is possible to do so with the premium [WSAL Reporting Extension](http://w
 7. If there are more than 15 sites in a multisite, an auto complete site search shows up instead of the drop down menu (see [screenshots](https://wordpress.org/plugins/wp-security-audit-log/screenshots/) for reference)
 
 == Changelog ==
+
+= 1.3.3 (2015-01-21) =
+* **New Features**
+	* [Premium Add-ons](http://www.wpwhitesecurity.com/wordpress-security-plugins/wp-security-audit-log/extensions/) will be hidden from the WordPress plugins page when the Hide plugin option is enabled.
+	
+* **Improvements**
+	* Updated some of the help text in plugin's settings page
+	* Updated the text of some WordPress security alerts
+	
+* **Bug Fixes**
+	* Fixed a bug related to the reverse proxy / IP retrieval functionality
+	* Fixed an issue related to Sandbox removal and upgrades [Support Ticket](https://wordpress.org/support/topic/fatal-error-undefined-method-on-upgrade)
 
 = 1.3.2 (2014-12-16) =
 * **New Features and Options**
