@@ -171,8 +171,21 @@ Yes it is possible to do so with the premium [WSAL Reporting Extension](http://w
 
 == Changelog ==
 
-= 1.5 (2015-03-08) =
-* To be announced later
+= 1.5.0 (2015-03-18) =
+* **New Features**
+	* Ability to exclude custom fields from monitoring (custom fields can be excluded from the Audit Log Viewer with a simple click or you can specify them in the settings)
+	* Ability to exclude WordPress users and roles from monitoring
+
+* **Improvements**
+	* WP Security Audit Log now has its own settings table in WordPress database. This will provide us with more flexibility and have more centralization of data
+	* Updated the code where is_admin() function was being used to follow better security practises
+	
+* **Bug Fixes**
+	* Fixed a problem where a PHP exception was being thrown during the activation of the plugin [support ticket]()
+
+= 1.4.1 (2015-03-12) =
+* **Bug Fix**
+	* Fixed an issue where the IP address was not being reported for anyone using PHP version 5.3.3 or earlier [support ticket](https://wordpress.org/support/topic/invalid-ip-address-error?replies=4)
 
 = 1.4 (2015-02-24) =
 * **New Features**
