@@ -7,7 +7,7 @@ License URI: http://www.gnu.org/licenses/gpl.html
 Tags: wordpress security plugin, wordpress security audit log, audit log, wordpress log, event log wordpress, wordpress user tracking, wordpress activity log, wordpress audit, security event log, audit trail, security audit trail, wordpress security alerts, wordpress monitor, wordpress security monitor, wordpress admin, wordpress admin monitoring, analytics, activity, admin, multisite, wordpress multisite, actions, dashboard, log, notification, wordpress monitoring, email notification, wordpress email alerts, tracking, user tracking, user activity report
 Requires at least: 3.6
 Tested up to: 4.1.1
-Stable tag: 1.4.1
+Stable tag: 1.5.0
 
 Keep an WordPress audit log of all users' changes and other under the hood activity - Identify WordPress issues before they become security problems.
 
@@ -171,9 +171,8 @@ Yes it is possible to do so with the premium [WSAL Reporting Extension](http://w
 
 == Changelog ==
 
-= 1.4.1 (2015-03-12) =
-* **Bug Fix**
-	* Fixed an issue where the IP address was not being reported for anyone using PHP version 5.3.3 or earlier [support ticket](https://wordpress.org/support/topic/invalid-ip-address-error?replies=4)
+= 1.5 (2015-03-08) =
+* To be announced later
 
 = 1.4 (2015-02-24) =
 * **New Features**
