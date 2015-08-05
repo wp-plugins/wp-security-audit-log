@@ -1,4 +1,0 @@
-<?php /**
- * @kyos
- * Uninstall plugin
- */
